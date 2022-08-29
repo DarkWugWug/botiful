@@ -8,8 +8,9 @@ import { initLogger } from "./logger";
 import { helpCommand, manCommand } from "./actions";
 import { adminMiddleware, rolesMiddleware, usersMiddleware } from "./middleware";
 
+// TESting
 export * from "./foundation";
-// Test
+
 export class DiscordBot implements IDiscordBot
 {
     public readonly config: { [key: string]: any };
