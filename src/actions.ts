@@ -1,16 +1,18 @@
 import { IAction } from "./foundation";
 
-export const help: IAction =
+
+
+export const helpCommand: IAction =
 {
     name: "help",
     description: "Displays a list of all commands available to you",
     admin: false,
-    run: (args, msg, bot) => {
-        return bot.actions().map((action) => `${action.name} : ${action.description}`).join('\n');
+    run: (_args, _msg, bot) => {
+        return bot.getActions().map((action) => `${action.name} : ${action.description}`).join('\n');
     }
 };
 
-export const man: IAction =
+export const manCommand: IAction =
 {
     name: "man",
     description: "Displays the manual entry for a specified command",
@@ -21,7 +23,7 @@ export const man: IAction =
             msg.channel.send("You must pass in a command to look up the manual entry for.");
             return;
         }
-        const command = bot.get_action(args[0]);
+        const command = bot.getAction(args[0]);
         if(!command) {
             msg.channel.send(`Could not find the command '${args[0]}'.`);
             return;

@@ -1,27 +1,24 @@
 export interface IDiscordBotConfig {
     token: string;
+    intents: number[];
     prefix?: string;
     admin?: string;
     environment?: string;
-    logger?: {
-        level?: string;
-        output?: string;
-    };
+    loggerLevel?: string;
+    loggerOutput?: string;
     data?: {
         [key: string]: any;
     };
 }
-export interface IDiscordBotConfigComplete {
-    token: string;
+export interface IDiscordBotConfigComplete extends IDiscordBotConfig {
     prefix: string;
     admin: string;
     environment: string;
-    logger: {
-        level: string;
-        output: string;
-    };
+    loggerLevel: string;
+    loggerOutput: string;
     data: {
         [key: string]: any;
     };
 }
-export declare const default_config: IDiscordBotConfigComplete;
+export declare const default_config: Omit<IDiscordBotConfigComplete, "token" | "intents">;
+export declare function getCompleteConfig(config: IDiscordBotConfig): IDiscordBotConfigComplete;

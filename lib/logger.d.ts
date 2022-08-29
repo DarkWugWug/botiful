@@ -1,4 +1,4 @@
 import { Logger } from "winston";
 import { IDiscordBotConfigComplete } from "./config";
-export declare const bot_format: import("logform").FormatWrap;
-export declare function init_logger(config: IDiscordBotConfigComplete): Logger;
+export declare const botFormat: import("logform").FormatWrap;
+export declare function initLogger(config: IDiscordBotConfigComplete): Logger;

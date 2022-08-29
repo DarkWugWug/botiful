@@ -1,6 +1,6 @@
 import { DiscordBot } from "../lib/index"
 
-/* tslint:disable:no-console */
+
 
 test('Should load help action', async (done) => {
     expect.hasAssertions();

@@ -1,3 +1,3 @@
 import { IAction } from "./foundation";
-export declare const help: IAction;
-export declare const man: IAction;
+export declare const helpCommand: IAction;
+export declare const manCommand: IAction;

@@ -1,36 +1,45 @@
 
+
+
 export interface IDiscordBotConfig
 {
     token: string;
+    intents: number[];
     prefix?: string;
     admin?: string;
     environment?: string;
-    logger?: {
-        level?: string;
-        output?: string;
-    };
+    loggerLevel?: string;
+    loggerOutput?: string;
     data?: { [key: string]: any }
 }
-export interface IDiscordBotConfigComplete
+export interface IDiscordBotConfigComplete extends IDiscordBotConfig
 {
-    token: string;
     prefix: string;
     admin: string;
     environment: string;
-    logger: {
-        level: string;
-        output: string;
-    };
+    loggerLevel: string;
+    loggerOutput: string;
     data: { [key: string]: any };
 }
-export const default_config: IDiscordBotConfigComplete = {
-    token: "",
+export const default_config: Omit<IDiscordBotConfigComplete, "token" | "intents"> = {
     prefix: '!',
     admin: "Discord Admin",
     environment: process.env.NODE_ENV ? process.env.NODE_ENV : "development",
-    logger: {
-        level: process.env.NODE_ENV === "production" ? "info" : "debug",
-        output: "console"
-    },
+    loggerLevel: process.env.NODE_ENV === "production" ? "info" : "debug",
+    loggerOutput: "console",
     data: {  }
 };
+
+function verifyConfig(config: any) {
+    if(typeof config.token !== "string") {
+        throw new Error(`Expected Discord token in config, but found '${config.token}'`);
+    }
+    if(!Array.isArray(config.intents)) {
+        throw new Error("Could not find intents for the bot to use.");
+    }
+}
+export function getCompleteConfig(config: IDiscordBotConfig): IDiscordBotConfigComplete
+{
+    verifyConfig(config);
+    return { ...default_config, ...config };
+}

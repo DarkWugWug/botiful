@@ -1,5 +1,5 @@
-import { Logger } from "winston";
-import { Client, Message } from "discord.js";
+import type { Logger } from "winston";
+import type { Client, Message, PartialMessage } from "discord.js";
 
 export interface IDiscordBot
 {
@@ -9,12 +9,14 @@ export interface IDiscordBot
     readonly admin_role: string;
     readonly prefix: string;
 
-    actions: () => IAction[];
-    get_action: (command: string) => IAction | null;
+    getActions: () => IAction[];
+    getAction: (command: string) => IAction | null;
 }
 
+export type SemiPartialMessage = PartialMessage & Pick<Message, "content" | "author">;
+
 export type ActionMap = { [name: string]: IAction };
-export type ActionRun = (args: string[], msg: Message, bot: IDiscordBot) => void | string | Promise<void> | Promise<string>;
+export type ActionRun = (args: string[], msg: Message | SemiPartialMessage, bot: IDiscordBot) => void | string | Promise<void> | Promise<string>;
 export interface IAction
 {
     readonly name: string;
@@ -30,13 +32,6 @@ export interface IAction
     readonly run: ActionRun;
     readonly cleanup?: (bot: IDiscordBot) => void | Promise<void>;
 }
-export function verifyAction(maybe_action: any)
-{
-    if(typeof maybe_action !== "object") { return false; };
-    const props = Object.getOwnPropertyNames(maybe_action);
-    const hasRequiredFields = [ "name", "description", "admin", "run" ].every(p => props.includes(p));
-    return hasRequiredFields && (typeof maybe_action.run === "function");
-}
 
 export function subcommand(subcmds: { [name: string]: ActionRun }): ActionRun
 {
@@ -51,11 +46,5 @@ export function subcommand(subcmds: { [name: string]: ActionRun }): ActionRun
 export interface IMiddleware
 {
     readonly init?: (bot: IDiscordBot) => void | Promise<void>;
-    readonly apply: (action: IAction, message: Message, bot: IDiscordBot) => boolean | Promise<boolean>;
-}
-export function verifyMiddleware(maybe_middleware: any)
-{
-    if(typeof maybe_middleware !== "object") { return false; };
-    const props = Object.getOwnPropertyNames(maybe_middleware);
-    return typeof maybe_middleware.apply === "function";
+    readonly apply: (action: IAction, message: Message | SemiPartialMessage, bot: IDiscordBot) => boolean | Promise<boolean>;
 }
