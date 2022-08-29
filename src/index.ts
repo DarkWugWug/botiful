@@ -2,7 +2,7 @@ import { Logger } from "winston";
 import { Client, Message, PartialMessage } from "discord.js";
 
 import { IDiscordBotConfig, getCompleteConfig } from "./config";
-import { IAction, ActionMap, IMiddleware, IDiscordBot, SemiPartialMessage } from "./foundation";
+import { IAction, ActionMap, IMiddleware, IDiscordBot, SemiPartialMessage, MiddlewareMap } from "./foundation";
 import { initLogger } from "./logger";
 
 import { helpCommand, manCommand } from "./actions";
@@ -20,7 +20,7 @@ export class DiscordBot implements IDiscordBot
     public readonly prefix: string;
 
     private _actions: ActionMap = {  };
-    private middleware: IMiddleware[] = [  ];
+    private _middlewares: MiddlewareMap = {   };
     private readonly token: string;
 
     public constructor(options: IDiscordBotConfig)
@@ -38,6 +38,9 @@ export class DiscordBot implements IDiscordBot
     }
     public getAction(command: string) { return this._actions[command]; }
     public getActions() { return Object.values(this._actions); }
+
+    public getMiddleware(name: string) { return this._middlewares[name]; }
+    public getMiddlewares() { return Object.values(this._middlewares) }
 
     public async logout()
     {
@@ -111,9 +114,11 @@ export class DiscordBot implements IDiscordBot
     public loadMiddleware(middleware_param: IMiddleware | IMiddleware[]): void
     {
         if(middleware_param instanceof Array) {
-            this.middleware = this.middleware.concat(middleware_param);
+            middleware_param.forEach((middleware) => {
+                this._middlewares[middleware.name] = middleware
+            });
         } else {
-            this.middleware.push(middleware_param);
+            this._middlewares[middleware_param.name] = middleware_param;
         }
     }
 
@@ -134,7 +139,7 @@ export class DiscordBot implements IDiscordBot
         });
 
         return Promise.all(
-            this.middleware
+            Object.values(this._middlewares)
                 .filter((mw) => mw.init)
                 .map((mw) => (mw.init as () => void | Promise<void>)())
         ).then(() => Promise.all(
@@ -146,7 +151,7 @@ export class DiscordBot implements IDiscordBot
 
     private async isAuthorized(action: IAction, message: SemiPartialMessage): Promise<boolean>
     {
-        for(const mw of this.middleware)
+        for(const mw of Object.values(this._middlewares))
         {
             if(!(await mw.apply(action, message, this))) {
                 return false;

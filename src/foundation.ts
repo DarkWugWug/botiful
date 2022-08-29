@@ -11,6 +11,9 @@ export interface IDiscordBot
 
     getActions: () => IAction[];
     getAction: (command: string) => IAction | null;
+
+    getMiddlewares: () => IMiddleware[];
+    getMiddleware: (name: string) => IMiddleware | null;
 }
 
 export type SemiPartialMessage = PartialMessage & Pick<Message, "content" | "author">;
@@ -50,8 +53,10 @@ export function subcommand(subcmds: { [name: string]: ActionRun }): ActionRun
     };
 }
 
+export type MiddlewareMap = { [name: string]: IMiddleware };
 export interface IMiddleware
 {
+    readonly name: string;
     readonly init?: (bot: IDiscordBot) => void | Promise<void>;
     readonly apply: (action: IAction, message: Message | SemiPartialMessage, bot: IDiscordBot) => boolean | Promise<boolean>;
 }

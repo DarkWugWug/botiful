@@ -12,11 +12,13 @@ export declare class DiscordBot implements IDiscordBot {
     readonly adminRole: string;
     readonly prefix: string;
     private _actions;
-    private middleware;
+    private _middlewares;
     private readonly token;
     constructor(options: IDiscordBotConfig);
     getAction(command: string): IAction;
     getActions(): IAction[];
+    getMiddleware(name: string): IMiddleware;
+    getMiddlewares(): IMiddleware[];
     logout(): Promise<Logger>;
     start(): Promise<void>;
     runAction(msg: Message | PartialMessage): Promise<void>;
