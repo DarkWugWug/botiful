@@ -1,0 +1,46 @@
+#!/bin/bash
+end() {
+    rm -rf /tmp/botiful-checksum
+    if [[ $1 == 0 ]]; then
+        echo
+        echo "Resuming commit..."
+    fi
+    exit $1
+}
+if [[ -d /tmp/botiful-checksum ]]; then rm -Rf /tmp/botiful-checksum; fi
+CHECKSUM_CURRENT_LIB=$(find ./lib -type f -exec cat {} \; | sha1sum)
+CHECKSUM_CURRENT_SRC=$(find ./src -type f -exec cat {} \; | sha1sum)
+git clone --no-checkout --single-branch -q . /tmp/botiful-checksum
+THIS_DIR=$(pwd)
+cd /tmp/botiful-checksum
+git reset --hard -q HEAD~1
+CHECKSUM_LAST_LIB=$(find ./lib -type f -exec cat {} \; | sha1sum)
+CHECKSUM_LAST_SRC=$(find ./src -type f -exec cat {} \; | sha1sum)
+if [[ $CHECKSUM_CURRENT_LIB == $CHECKSUM_LAST_LIB ]] && [[ $CHECKSUM_CURRENT_SRC != $CHECKSUM_LAST_SRC ]]; then
+    echo
+    echo "Wooohh there programmer..."
+    echo "It looks like the project's source files have changed but haven't been compiled yet."
+    exec < /dev/tty
+    read -p "Do you want to run 'npm run build' and capture source code changes in this commit? [y/N] " -n 1 -r
+    echo # New line
+    cd $THIS_DIR
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        npm run build
+        CHECKSUM_CURRENT_LIB=$(find ./lib -type f -exec cat {} \; | sha1sum)
+        if [[ $CHECKSUM_CURRENT_LIB == $CHECKSUM_LAST_LIB ]]; then
+            echo "Something went wrong..."
+            echo "Package successfully rebuilt, but the library is still the same"
+            echo "If there's source file changes that are not compiled into the library, this warning is to be expected"
+            echo "If the source file changes are supposed to be compiled, I'd check the library files to ensure the changes have been built properly"
+            end 0
+        fi
+        echo
+        echo "Package successfully rebuilt"
+        git add ./lib
+        echo "Source code changes have been built and staged for commit"
+        end 0
+    fi
+    echo
+    echo "Note: Source code changes made in this commit (if any) haven't been compiled."
+    end 0
+fi
