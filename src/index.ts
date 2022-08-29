@@ -17,11 +17,11 @@ export class DiscordBot implements IDiscordBot
     public readonly config: { [key: string]: any };
     public readonly log: Logger;
     public readonly client: Client;
-    public readonly adminRole: string;
+    public readonly admin_role: string;
+    public readonly prefix: string;
 
     private _actions: ActionMap = {  };
     private middleware: IMiddleware[] = [  ];
-    private readonly prefix: string;
     private readonly token: string;
 
     public constructor(options: IDiscordBotConfig)
