@@ -9,7 +9,7 @@ import { helpCommand, manCommand } from "./actions";
 import { adminMiddleware, rolesMiddleware, usersMiddleware } from "./middleware";
 
 export * from "./foundation";
-
+// Test
 export class DiscordBot implements IDiscordBot
 {
     public readonly config: { [key: string]: any };
