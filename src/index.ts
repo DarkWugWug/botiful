@@ -139,7 +139,7 @@ export class DiscordBot implements IDiscordBot
         });
 
         return Promise.all(
-            Object.values(this._middlewares)
+            this.getMiddlewares()
                 .filter((mw) => mw.init)
                 .map((mw) => (mw.init as () => void | Promise<void>)())
         ).then(() => Promise.all(
@@ -151,7 +151,7 @@ export class DiscordBot implements IDiscordBot
 
     private async isAuthorized(action: IAction, message: SemiPartialMessage): Promise<boolean>
     {
-        for(const mw of Object.values(this._middlewares))
+        for(const mw of this.getMiddlewares())
         {
             if(!(await mw.apply(action, message, this))) {
                 return false;
