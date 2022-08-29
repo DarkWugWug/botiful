@@ -1,6 +1,6 @@
 {
     "name": "botiful",
-    "version": "0.2.31",
+    "version": "0.2.4",
     "description": "An accessible framework for making modular Discord Bots",
     "license": "MIT",
     "repository": "https://github.com/scott181182/botiful",
