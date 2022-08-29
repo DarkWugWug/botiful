@@ -10,14 +10,12 @@ import { adminMiddleware, rolesMiddleware, usersMiddleware } from "./middleware"
 
 export * from "./foundation";
 
-
-
 export class DiscordBot implements IDiscordBot
 {
     public readonly config: { [key: string]: any };
     public readonly log: Logger;
     public readonly client: Client;
-    public readonly admin_role: string;
+    public readonly adminRole: string;
     public readonly prefix: string;
 
     private _actions: ActionMap = {  };
@@ -131,7 +129,7 @@ export class DiscordBot implements IDiscordBot
             if((oldmsg.content === newmsg.content)
                 || (newmsg.embeds && !oldmsg.embeds)
                 || (newmsg.embeds.length > 0 && oldmsg.embeds.length === 0)) { return; }
-            else { return this.runAction(newmsg); }
+            this.runAction(newmsg);
         });
 
         return Promise.all(
