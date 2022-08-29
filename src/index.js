@@ -1,15 +1,12 @@
+"use strict";
 // import { Logger } from "winston";
 // import { Client, Message, PartialMessage } from "discord.js";
-
 // import { IDiscordBotConfig, getCompleteConfig } from "./config";
 // import { IAction, ActionMap, IMiddleware, IDiscordBot, SemiPartialMessage } from "./foundation";
 // import { initLogger } from "./logger";
-
 // import { helpCommand, manCommand } from "./actions";
 // import { adminMiddleware, rolesMiddleware, usersMiddleware } from "./middleware";
-
 // export * from "./foundation";
-
 // export class DiscordBot implements IDiscordBot
 // {
 //     public readonly config: { [key: string]: any };
@@ -17,15 +14,12 @@
 //     public readonly client: Client;
 //     public readonly adminRole: string;
 //     public readonly prefix: string;
-
 //     private _actions: ActionMap = {  };
 //     private middleware: IMiddleware[] = [  ];
 //     private readonly token: string;
-
 //     public constructor(options: IDiscordBotConfig)
 //     {
 //         const config = getCompleteConfig(options);
-
 //         this.log = initLogger(config);
 //         this.config = config.data;
 //         this.prefix = config.prefix;
@@ -37,7 +31,6 @@
 //     }
 //     public getAction(command: string) { return this._actions[command]; }
 //     public getActions() { return Object.values(this._actions); }
-
 //     public async logout()
 //     {
 //         this.log.debug("Bot shutting down...");
@@ -48,26 +41,20 @@
 //             .then(() => this.client.destroy())
 //             .then(() => this.log.info("Bot logged out!"));
 //     }
-
-
-
 //     public async start(): Promise<void>
 //     {
 //         await this.init();
 //         this.log.info("Starting Discord Bot...");
-
 //         if(this.token.length === 0) { this.log.error("No token found!"); }
 //         return this.client.login(this.token).then(() => {
 //             this.log.info(`${this.client.user?.username} has logged in and started!`);
 //         }).catch((err) => { this.log.error(err); });
 //     }
-
 //     public async runAction(msg: Message | PartialMessage): Promise<void>
 //     {
 //         if(!msg.content || !msg.author) { return; }
 //         if(!msg.content.startsWith(this.prefix)
 //             || msg.author.equals(this.client.user!)) { return; }
-
 //         const cmd_regex = /("[^"]*"|\S+)/g;
 //         let cmd_args = (msg.content.match(cmd_regex) || [  ])
 //             .map((arg) => /^".*"$/.test(arg)
@@ -75,7 +62,6 @@
 //                 : arg);
 //         const cmd = cmd_args[0].substring(1);
 //         cmd_args = cmd_args.slice(1);
-
 //         let reply = `'${cmd}' is not a valid command!`;
 //         const cmd_action = this._actions[cmd];
 //         if(cmd_action)
@@ -93,7 +79,6 @@
 //         }
 //         if(reply.length > 0) { msg.channel.send(reply); }
 //     }
-
 //     public loadActions(actions: IAction[]): void;
 //     public loadActions(action_map: { [name: string]: IAction }): void;
 //     public loadActions(actions_param: { [name: string]: IAction } | IAction[] | IAction): void
@@ -104,7 +89,6 @@
 //             Object.assign(this._actions, actions_param);
 //         }
 //     }
-
 //     public loadMiddleware(middleware: IMiddleware): void;
 //     public loadMiddleware(middleware: IMiddleware[]): void;
 //     public loadMiddleware(middleware_param: IMiddleware | IMiddleware[]): void
@@ -115,15 +99,11 @@
 //             this.middleware.push(middleware_param);
 //         }
 //     }
-
-
-
 //     private init(): Promise<void>
 //     {
 //         this.log.info("Initializing Discord Bot...");
 //         this.loadActions([ helpCommand, manCommand ]);
 //         this.loadMiddleware([ adminMiddleware, rolesMiddleware, usersMiddleware ]);
-
 //         this.client.on("messageCreate", (msg) => this.runAction(msg));
 //         this.client.on("messageUpdate", (oldmsg, newmsg) => {
 //             if((oldmsg.content === newmsg.content)
@@ -131,7 +111,6 @@
 //                 || (newmsg.embeds.length > 0 && oldmsg.embeds.length === 0)) { return; }
 //             this.runAction(newmsg);
 //         });
-
 //         return Promise.all(
 //             this.middleware
 //                 .filter((mw) => mw.init)
@@ -142,7 +121,6 @@
 //                 .map((action) => (action.init as () => void | Promise<void>)())
 //         )).then(() => { /* Gotta return Promise<void> */ });
 //     }
-
 //     private async isAuthorized(action: IAction, message: SemiPartialMessage): Promise<boolean>
 //     {
 //         for(const mw of this.middleware)
