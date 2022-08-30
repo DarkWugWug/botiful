@@ -1,8 +1,9 @@
 import { Logger } from "winston";
 import { Client, Message, PartialMessage } from "discord.js";
+import persist, { LocalStorage } from "node-persist";
 
 import { IDiscordBotConfig, getCompleteConfig } from "./config";
-import { IAction, ActionMap, IMiddleware, IDiscordBot, SemiPartialMessage, MiddlewareMap } from "./foundation";
+import { IAction, ActionMap, IMiddleware, IDiscordBot, SemiPartialMessage, MiddlewareMap, ActionRun } from "./foundation";
 import { initLogger } from "./logger";
 
 import { helpCommand, manCommand } from "./actions";
@@ -21,6 +22,7 @@ export class DiscordBot implements IDiscordBot
 
     private _actions: ActionMap = {  };
     private _middlewares: MiddlewareMap = {   };
+    private store: LocalStorage;
     private readonly token: string;
 
     public constructor(options: IDiscordBotConfig)
@@ -35,6 +37,7 @@ export class DiscordBot implements IDiscordBot
         this.client = new Client({
             intents: config.intents
         });
+        this.store = persist;
     }
     public getAction(command: string) { return this._actions[command]; }
     public getActions() { return Object.values(this._actions); }
@@ -122,31 +125,55 @@ export class DiscordBot implements IDiscordBot
         }
     }
 
+    private async initStorage() {
+        await this.store.init({ dir: "./data" });
+        this.log.info("Initialized data store");
+    }
 
+    private async initMiddlewares() {
+        const botifulMiddleware = [adminMiddleware, rolesMiddleware, usersMiddleware];
+        this.loadMiddleware(botifulMiddleware);
+        this.log.debug(`Loaded all middlewares: [ ${this.getMiddlewares().join(", ")} ]`);
+        const middlewaresWithInit = this.getMiddlewares()
+            .reduce((collect, mw) => {
+                if (mw.init) { collect.push(mw.init) }
+                return collect;
+            }, [] as Array<IMiddleware["init"]>);
+        await Promise.all(middlewaresWithInit);
+        this.log.debug(
+            `Initialized middlewares: [ ${middlewaresWithInit.join(", ")} ]`
+        );
+    }
 
-    private init(): Promise<void>
+    private async initActions() {
+        const botifulActions = [ helpCommand, manCommand ];
+        this.loadActions(botifulActions);
+        this.log.debug(`Loaded all actions: [ ${this.getActions().join(', ')} ]`);
+        const actionsWithInit = this.getActions()
+            .reduce((collect, action) => {
+                if (action.init) collect.push(action.init);
+                return collect;
+            }, [] as Array<IAction["init"]>);
+        await Promise.all(actionsWithInit);
+        this.log.debug(
+            `Initialized actions: [ ${actionsWithInit.join(", ")} ]`
+        );
+    }
+
+    private async init(): Promise<void>
     {
-        this.log.info("Initializing Discord Bot...");
-        this.loadActions([ helpCommand, manCommand ]);
-        this.loadMiddleware([ adminMiddleware, rolesMiddleware, usersMiddleware ]);
-
+        await this.initStorage();
+        await Promise.all([
+            this.initMiddlewares(),
+            this.initActions(),
+        ]);
         this.client.on("messageCreate", (msg) => this.runAction(msg));
-        this.client.on("messageUpdate", (oldmsg, newmsg) => {
-            if((oldmsg.content === newmsg.content)
-                || (newmsg.embeds && !oldmsg.embeds)
-                || (newmsg.embeds.length > 0 && oldmsg.embeds.length === 0)) { return; }
-            this.runAction(newmsg);
+        this.client.on("messageUpdate", (oldMsg, newMsg) => {
+            if((oldMsg.content === newMsg.content)
+                || (newMsg.embeds && !oldMsg.embeds)
+                || (newMsg.embeds.length > 0 && oldMsg.embeds.length === 0)) { return; }
+            this.runAction(newMsg);
         });
-
-        return Promise.all(
-            this.getMiddlewares()
-                .filter((mw) => mw.init)
-                .map((mw) => (mw.init as () => void | Promise<void>)())
-        ).then(() => Promise.all(
-            this.getActions()
-                .filter((action) => action.init)
-                .map((action) => (action.init as () => void | Promise<void>)())
-        )).then(() => { /* Gotta return Promise<void> */ });
     }
 
     private async isAuthorized(action: IAction, message: SemiPartialMessage): Promise<boolean>
