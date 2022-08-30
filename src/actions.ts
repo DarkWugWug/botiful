@@ -1,4 +1,5 @@
 import { IAction } from "./foundation";
+import { format } from "./utils";
 
 
 
@@ -8,7 +9,9 @@ export const helpCommand: IAction =
     description: "Displays a list of all commands available to you",
     admin: false,
     run: (_args, _msg, bot) => {
-        return bot.getActions().map((action) => `${action.name} : ${action.description}`).join('\n');
+        return bot.getActions().map((action) =>
+            `${format(action.name, bot)} : ${format(action.description, bot)}`
+        ).join('\n');
     }
 };
 
@@ -32,6 +35,6 @@ export const manCommand: IAction =
             msg.channel.send(`The '${args[0]}' command does not have a manual entry.`);
             return;
         }
-        msg.channel.send(command.man);
+        msg.channel.send(format(command.man, bot));
     }
 };
