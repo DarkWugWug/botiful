@@ -1,4 +1,4 @@
-import { Client, GuildMember, Message, PartialMessage, User } from 'discord.js';
+import { Client, ColorResolvable, GuildMember, Message, PartialMessage, User } from 'discord.js';
 import { LocalStorage } from 'node-persist';
 import { Logger } from 'winston';
 import { PlayerSubscription } from '@discordjs/voice';
@@ -20,7 +20,7 @@ export interface IAction<T extends PrivateData> {
     readonly admin: boolean;
     readonly roles?: string[];
     readonly users?: string[];
-    init?: (privateData: PrivateStorage<T>, logger: Logger) => void | Promise<void>;
+    init?: (privateData: PrivateStorage<T>, logger: Logger, client: ArmoredClient) => void | Promise<void>;
     run: (message: ArmoredMessage, privateData: PrivateStorage<T>, logger: Logger) => void | Promise<void>;
 }
 export declare class ArmoredAction<T extends PrivateData> {
@@ -38,7 +38,7 @@ export declare type ActionContext = Pick<IAction<any>, 'name' | 'description' | 
 export interface IMiddleware<T extends PrivateData> {
     readonly name: string;
     readonly defaults?: T;
-    init?: (privateData: PrivateStorage<T>, logger: Logger) => {};
+    init?: (privateData: PrivateStorage<T>, logger: Logger, client: ArmoredClient) => {};
     apply: (context: ActionContext, message: ArmoredMessage, privateData: PrivateStorage<T>, logger: Logger) => boolean | Promise<boolean>;
 }
 export declare class ArmoredMiddleware<T extends PrivateData> {
@@ -78,7 +78,10 @@ export declare class ArmoredUser {
     tryJoinInVoice(selfDeaf?: boolean, selfMute?: boolean): Promise<PlayerSubscription>;
 }
 export declare class ArmoredClient {
-    constructor(_client: Client);
+    private readonly client;
+    constructor(client: Client);
+    guildsHaveRole(role: string): boolean;
+    createRoleInGuilds(name: string, color?: ColorResolvable, mentionable?: boolean): Promise<void>;
 }
 export declare class Command {
     readonly command: string;

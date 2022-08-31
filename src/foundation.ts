@@ -1,4 +1,4 @@
-import { Client, GuildMember, Message, PartialMessage, User } from 'discord.js'
+import { Client, ColorResolvable, GuildMember, Message, PartialMessage, User } from 'discord.js'
 import { LocalStorage } from 'node-persist'
 import { Logger } from 'winston'
 
@@ -31,7 +31,8 @@ export interface IAction<T extends PrivateData> {
 
 	init?: (
 		privateData: PrivateStorage<T>,
-		logger: Logger
+		logger: Logger,
+		client: ArmoredClient
 	) => void | Promise<void>
 	run: (
 		message: ArmoredMessage,
@@ -68,7 +69,7 @@ export class ArmoredAction<T extends PrivateData> {
 			await this.db._gentlyApplyDefaults(this.clientAction.defaults)
 		}
 		if (this.clientAction.init != null) {
-			await this.clientAction.init(this.db, this.logger)
+			await this.clientAction.init(this.db, this.logger, this.discordClient)
 		}
 	}
 
@@ -97,7 +98,11 @@ export interface IMiddleware<T extends PrivateData> {
 	readonly name: string
 	readonly defaults?: T
 
-	init?: (privateData: PrivateStorage<T>, logger: Logger) => {}
+	init?: (
+		privateData: PrivateStorage<T>,
+		logger: Logger,
+		client: ArmoredClient
+	) => {}
 
 	apply: (
 		context: ActionContext,
@@ -135,7 +140,7 @@ export class ArmoredMiddleware<T extends PrivateData> {
 			await this.db._gentlyApplyDefaults(this.clientMiddleware.defaults)
 		}
 		if (this.clientMiddleware.init != null) {
-			await this.clientMiddleware.init(this.db, this.logger)
+			await this.clientMiddleware.init(this.db, this.logger, this.discordClient)
 		}
 	}
 
@@ -267,14 +272,23 @@ export class ArmoredUser {
 	}
 }
 
-// TODO: Currently there are no use-cases for exposing any feature of the
-//       DiscordJS client. When they manifest, add them here. This ensures a
-//       level-of-control between clients and the DiscordJS client.
-
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class ArmoredClient {
-	// eslint-disable-next-line @typescript-eslint/no-useless-constructor
-	constructor (_client: Client) {}
+	constructor (private readonly client: Client) {}
+
+	public guildsHaveRole (role: string): boolean {
+		for (const guild of this.client.guilds.cache.values()) {
+			if (!guild.roles.cache.some((x) => x.name === role)) return false
+		}
+		return true
+	}
+
+	public async createRoleInGuilds (name: string, color?: ColorResolvable, mentionable?: boolean): Promise<void> {
+		await Promise.all(
+			[...this.client.guilds.cache.values()]
+				.filter((guild) => !guild.roles.cache.some((role) => role.name === name))
+				.map(async (guild) => await guild.roles.create({ name, color, mentionable, reason: 'platform-botiful' }))
+		)
+	}
 }
 
 export class Command {

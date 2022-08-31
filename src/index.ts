@@ -10,7 +10,7 @@ import {
 	IDiscordBot, IMiddleware, Command
 } from './foundation'
 import { initLogger } from './logger'
-import { AdminAccessMiddleware, RbacMiddleware, UsernameAccessMiddleware } from './middleware'
+import { AdminAccessMiddleware, RbacMiddleware } from './middleware'
 import { PrivateData } from './storage'
 import { Formatter } from './utils'
 
@@ -21,6 +21,7 @@ export {
 	IDiscordBot,
 	ArmoredMessage as Message,
 	ArmoredUser as User,
+	ArmoredClient as Client,
 	Command
 } from './foundation'
 export { PrivateStorage as Store } from './storage'
@@ -157,8 +158,7 @@ export class DiscordBot implements IDiscordBot {
 	private async initMiddlewares (): Promise<void> {
 		const botifulMiddleware = [
 			new AdminAccessMiddleware(this.adminRole),
-			new RbacMiddleware(),
-			new UsernameAccessMiddleware()
+			new RbacMiddleware(this.emitter, [...this.actions.values()].map((x) => x.asContext()))
 		]
 		this.loadMiddleware(...botifulMiddleware)
 		const middlewaresWithInit = Object.values(this.middleware).map(
@@ -173,10 +173,7 @@ export class DiscordBot implements IDiscordBot {
 	}
 
 	private async initActions (): Promise<void> {
-		const currentActions = []
-		for (const action of this.actions.values()) {
-			currentActions.push(action.asContext())
-		}
+		const currentActions = [...this.actions.values()].map((x) => x.asContext())
 		const botifulActions = [
 			new HelpAction(this.emitter, currentActions),
 			new ManCommand(this.emitter, currentActions)

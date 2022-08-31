@@ -1,4 +1,5 @@
-import { ActionContext, IMiddleware, Logger, Message, Store } from './'
+import EventEmitter from 'events'
+import { ActionContext, IMiddleware, Logger, Message, Store, Client } from './'
 
 interface AdminAccessData { [id: string]: number }
 export class AdminAccessMiddleware implements IMiddleware<AdminAccessData> {
@@ -9,10 +10,9 @@ export class AdminAccessMiddleware implements IMiddleware<AdminAccessData> {
 		this.roleName = roleName
 	}
 
-	public async init (privateData: Store<AdminAccessData>, logger: Logger): Promise<void> {
-		// TODO: Use case for ArmoredClient
-		//       Pass in here to allow this middleware to ensure roles exist (like the adminRole)
-		//       Will need to be done for every guild this bot is a part of
+	public async init (_privateData: Store<AdminAccessData>, _logger: Logger, client: Client): Promise<void> {
+		if (client.guildsHaveRole(this.roleName)) return
+		await client.createRoleInGuilds(this.roleName, 'RANDOM')
 	}
 
 	public async apply (
@@ -46,6 +46,23 @@ interface RbacData { [id: string]: number }
 export class RbacMiddleware implements IMiddleware<RbacData> {
 	public readonly name = 'roleBasedAccessControl'
 
+	private readonly roles: Set<string> = new Set()
+
+	constructor (emitter: EventEmitter, actions: ActionContext[]) {
+		for (const action of actions) {
+			this.addActionRoles(action)
+		}
+		emitter.on('actionLoaded', (action: ActionContext) => this.addActionRoles(action))
+	}
+
+	public async init (_privateData: Store<AdminAccessData>, _logger: Logger, client: Client): Promise<void> {
+		for (const role of this.roles) {
+			if (!client.guildsHaveRole(role)) {
+				await client.createRoleInGuilds(role)
+			}
+		}
+	}
+
 	public async apply (
 		action: ActionContext,
 		message: Message,
@@ -73,39 +90,11 @@ export class RbacMiddleware implements IMiddleware<RbacData> {
 			return false
 		}
 	}
-}
 
-export interface UsernameAccessData { [id: string]: number }
-export class UsernameAccessMiddleware
-implements IMiddleware<UsernameAccessData> {
-	public readonly name = 'usernameBasedAccessControl'
-
-	public async apply (
-		action: ActionContext,
-		message: Message,
-		data: Store<UsernameAccessData>,
-		logger: Logger
-	): Promise<boolean> {
-		if ((action.users == null) || action.users.length === 0) return true
-		const isExpectedUser = (action.users).some(
-			(username) => message.author.username === username
-		)
-		if (isExpectedUser) {
-			return true
-		} else {
-			const key = `${message.author.id}:deniedCount`
-			let count = await data.getItem(key)
-			if (count == null) count = 0
-			count++
-			await data.setItem(key, count, 15 * 60 * 1000)
-			logger.warn(
-				`Username based access denied for user ${message.author.tag} involving ${action.name}. Tried ${count} times in the past 15 minutes.`
-			)
-			logger.debug(
-				`Permitted users [ ${action.users.join(', ')} ]`
-			)
-			await message.reply('You are not allowed to use this command.')
-			return false
+	private addActionRoles (action: ActionContext): void {
+		if (action.roles == null) return
+		for (const role of action.roles) {
+			this.roles.add(role)
 		}
 	}
 }
