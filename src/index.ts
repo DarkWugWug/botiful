@@ -1,4 +1,5 @@
 import { Client, Message, PartialMessage } from 'discord.js'
+import EventEmitter from 'events'
 import persist, { LocalStorage } from 'node-persist'
 import { Logger } from 'winston'
 
@@ -32,11 +33,12 @@ export class DiscordBot implements IDiscordBot {
 	public readonly adminRole: string
 	public readonly prefix: string
 
-	private actions: Record<string, ArmoredAction<any>> = {}
-	private middleware: Record<string, ArmoredMiddleware<any>> = {}
+	private readonly actions: Map<string, ArmoredAction<any>> = new Map()
+	private readonly middleware: Map<string, ArmoredMiddleware<any>> = new Map()
 	private readonly store: LocalStorage
 	private readonly token: string
 	private readonly formatter: Formatter
+	private readonly emitter: EventEmitter
 
 	public constructor (options: IDiscordBotConfig) {
 		const config = getCompleteConfig(options)
@@ -50,6 +52,7 @@ export class DiscordBot implements IDiscordBot {
 		})
 		this.formatter = new Formatter(this.prefix, this.adminRole, this.client)
 		this.store = persist
+		this.emitter = new EventEmitter()
 	}
 
 	public listActions (): string[] {
@@ -92,10 +95,8 @@ export class DiscordBot implements IDiscordBot {
 		if (!msg.content.startsWith(this.prefix)) return // It's just a general text message not meant for this bot; Do nothing
 		const command = new Command(msg.content)
 		const message = new ArmoredMessage(msg, this.formatter)
-		const isLoaded = Object.keys(this.actions).find(
-			(x) => x === command.command
-		)
-		if (isLoaded == null) {
+		const action = this.actions.get(command.command)
+		if (action == null) {
 			let helpCmd = 'help'
 			for (const action of Object.values(this.actions)) {
 				if (action instanceof HelpAction) helpCmd = action.name
@@ -105,7 +106,6 @@ export class DiscordBot implements IDiscordBot {
 			)
 			return
 		}
-		const action = this.actions[command.command]
 		const authorized = await this.applyMiddleware(
 			action.asContext(),
 			message
@@ -115,52 +115,33 @@ export class DiscordBot implements IDiscordBot {
 	}
 
 	public loadActions<T extends PrivateData>(
-		actionsParam: Array<IAction<T>> | IAction<T>
+		...actionsParam: Array<IAction<T>>
 	): void {
-		if (actionsParam instanceof Array) {
-			for (const action of actionsParam) {
-				this.actions[action.name] = new ArmoredAction(
-					action,
-					this.store,
-					this.log,
-					new ArmoredClient(this.client)
-				)
-			}
-		} else {
-			this.actions[actionsParam.name] = new ArmoredAction(
-				actionsParam,
+		for (const action of actionsParam) {
+			const armoredAction = new ArmoredAction(
+				action,
 				this.store,
 				this.log,
 				new ArmoredClient(this.client)
 			)
-		}
-		const actionContexts = Object.values(this.actions).map((x) =>
-			x.asContext()
-		)
-		for (const action of Object.values(this.actions)) {
-			if (action instanceof HelpAction) action.replaceActionList(actionContexts)
-			else if (action instanceof ManCommand) action.replaceActionList(actionContexts)
+			const actionContext = armoredAction.asContext()
+			this.actions.set(action.name, armoredAction)
+			this.emitter.emit('actionLoaded', actionContext)
 		}
 	}
 
 	public loadMiddleware<T extends PrivateData>(
-		middlewareParam: Array<IMiddleware<T>> | IMiddleware<T>
+		...middlewareParam: Array<IMiddleware<T>>
 	): void {
-		if (middlewareParam instanceof Array) {
-			for (const middleware of middlewareParam) {
-				this.middleware[middleware.name] = new ArmoredMiddleware(
+		for (const middleware of middlewareParam) {
+			this.middleware.set(
+				middleware.name,
+				new ArmoredMiddleware(
 					middleware,
 					this.store,
 					this.log,
 					new ArmoredClient(this.client)
 				)
-			}
-		} else {
-			this.middleware[middlewareParam.name] = new ArmoredMiddleware(
-				middlewareParam,
-				this.store,
-				this.log,
-				new ArmoredClient(this.client)
 			)
 		}
 	}
@@ -179,7 +160,7 @@ export class DiscordBot implements IDiscordBot {
 			new RbacMiddleware(),
 			new UsernameAccessMiddleware()
 		]
-		this.loadMiddleware(botifulMiddleware)
+		this.loadMiddleware(...botifulMiddleware)
 		const middlewaresWithInit = Object.values(this.middleware).map(
 			(x) => x.initializeClient
 		)
@@ -192,14 +173,11 @@ export class DiscordBot implements IDiscordBot {
 	}
 
 	private async initActions (): Promise<void> {
-		const actionContexts = Object.values(this.actions).map((x) =>
-			x.asContext()
-		)
 		const botifulActions = [
-			new HelpAction(actionContexts),
-			new ManCommand(actionContexts)
+			new HelpAction(this.emitter),
+			new ManCommand(this.emitter)
 		]
-		this.loadActions(botifulActions)
+		this.loadActions(...botifulActions)
 		const actionsInit = Object.values(this.actions).map(
 			(x) => x.initializeClient
 		)
@@ -230,8 +208,9 @@ export class DiscordBot implements IDiscordBot {
 		action: ActionContext,
 		message: ArmoredMessage
 	): Promise<boolean> {
-		for (const name in this.middleware) {
-			if (!(await this.middleware[name].applyClient(action, message))) { return false }
+		for (const middleware of this.middleware.values()) {
+			const passes = await middleware.applyClient(action, message)
+			if (!passes) { return false } // TODO: For now let the middleware handle the reporting, eventually harden this
 		}
 		return true
 	}

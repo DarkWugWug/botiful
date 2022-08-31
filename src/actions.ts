@@ -1,3 +1,4 @@
+import EventEmitter from 'events'
 import { IAction, Logger, Message, Store } from './'
 import { ActionContext } from './foundation'
 
@@ -8,10 +9,12 @@ export class HelpAction implements IAction<{}> {
 
 	public readonly admin = false
 
-	private helpString: string
+	private readonly actions: ActionContext[] = []
 
-	constructor (actionList: ActionContext[]) {
-		this.helpString = this.parseHelpString(actionList)
+	constructor (emitter: EventEmitter) {
+		emitter.on('actionLoaded', (x: ActionContext) => {
+			this.actions.push(x)
+		})
 	}
 
 	public async run (
@@ -19,17 +22,15 @@ export class HelpAction implements IAction<{}> {
 		_store: Store<{}>,
 		_logger: Logger
 	): Promise<void> {
-		await message.reply(this.helpString)
-	}
-
-	public replaceActionList (actionList: ActionContext[]): void {
-		this.helpString = this.parseHelpString(actionList)
+		await message.reply(this.parseHelpString(this.actions))
 	}
 
 	private parseHelpString (actionList: ActionContext[]): string {
-		return actionList
-			.map((x) => `**${`:prefix:${x.name}`}**: ${x.description}`)
+		const header = '**:botName: actions:**\n'
+		const actionsText = actionList
+			.map((x) => `${`\`:prefix:${x.name}\``}: ${x.description}`)
 			.join('\n\n')
+		return header + actionsText
 	}
 }
 
@@ -41,10 +42,12 @@ export class ManCommand implements IAction<{}> {
 	public readonly man = '!man <command>'
 	public readonly admin = false
 
-	private actions: ActionContext[]
+	private readonly actions: ActionContext[] = []
 
-	constructor (actions: ActionContext[]) {
-		this.actions = actions
+	constructor (emitter: EventEmitter) {
+		emitter.on('actionLoaded', (x: ActionContext) => {
+			this.actions.push(x)
+		})
 	}
 
 	public async run (message: Message, _store: Store<{}>, logger: Logger): Promise<void> {
@@ -64,9 +67,5 @@ export class ManCommand implements IAction<{}> {
 		} else {
 			await message.reply(`\`:prefix:${action.name}\`:\n**Description:**\t${action.description}\n**Usage:**\t${action.man}`)
 		}
-	}
-
-	public replaceActionList (actions: ActionContext[]): void {
-		this.actions = actions
 	}
 }
