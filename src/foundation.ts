@@ -1,4 +1,4 @@
-import { Client, Message, PartialMessage, User } from 'discord.js'
+import { Client, GuildMember, Message, PartialMessage, User } from 'discord.js'
 import { LocalStorage } from 'node-persist'
 import { Logger } from 'winston'
 
@@ -258,10 +258,18 @@ export class ArmoredUser {
 	public id: string
 	public tag: string
 
-	constructor (user: User) {
+	public member?: GuildMember
+
+	constructor (user: User, member?: GuildMember) {
 		this.username = user.username
 		this.id = user.id
 		this.tag = user.tag
+		this.member = member
+	}
+
+	public hasRole (role: string): boolean {
+		if (this.member == null) return false
+		return this.member.roles.cache.has(role)
 	}
 }
 

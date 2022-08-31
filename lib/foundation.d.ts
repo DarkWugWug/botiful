@@ -1,4 +1,4 @@
-import { Client, Message, PartialMessage, User } from 'discord.js';
+import { Client, GuildMember, Message, PartialMessage, User } from 'discord.js';
 import { LocalStorage } from 'node-persist';
 import { Logger } from 'winston';
 import { PlayerSubscription } from '@discordjs/voice';
@@ -71,7 +71,9 @@ export declare class ArmoredUser {
     username: string;
     id: string;
     tag: string;
-    constructor(user: User);
+    member?: GuildMember;
+    constructor(user: User, member?: GuildMember);
+    hasRole(role: string): boolean;
 }
 export declare class ArmoredClient {
     constructor(_client: Client);
