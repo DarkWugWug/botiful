@@ -217,28 +217,28 @@ export class ArmoredUser {
 
 	public hasRole (role: string): boolean {
 		if (this.member == null) throw new Error(`User ${this.tag} is not a member of this server`)
-		const actualRole = this.member.roles.cache.find((x) => x.name === role)
+		const actualRole = this.member.guild.roles.cache.find((x) => x.name === role)
 		if (actualRole == null) throw new Error(`Role with name ${role} doesn't exist`)
 		return this.member.roles.cache.has(actualRole.id)
 	}
 
 	public hasAnyRole (roles: string[]): boolean {
 		if (this.member == null) throw new Error(`User ${this.tag} is not a member of this server`)
-		const actualRoles = this.member.roles.cache.filter((x) => roles.some((y) => y === x.name))
+		const actualRoles = this.member.guild.roles.cache.filter((x) => roles.some((y) => y === x.name))
 		if (actualRoles == null) throw new Error(`No role exists with a name from [ ${roles.join(', ')} ]`)
 		return this.member.roles.cache.hasAny(...actualRoles.keys())
 	}
 
 	public async giveRole (role: string): Promise<void> {
 		if (this.member == null) throw new Error(`User ${this.tag} is not a member of this server`)
-		const actualRole = this.member.roles.cache.find((x) => x.name === role)
+		const actualRole = this.member.guild.roles.cache.find((x) => x.name === role)
 		if (actualRole == null) throw new Error(`Role with name ${role} doesn't exist`)
 		await this.member.roles.add(actualRole.id)
 	}
 
 	public async removeRole (role: string): Promise<void> {
 		if (this.member == null) throw new Error('User is not a member of this server')
-		const actualRole = this.member.roles.cache.find((x) => x.name === role)
+		const actualRole = this.member.guild.roles.cache.find((x) => x.name === role)
 		if (actualRole == null) throw new Error('Role doesn\'t exists')
 		await this.member.roles.remove(actualRole)
 	}
