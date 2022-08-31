@@ -268,8 +268,18 @@ export class ArmoredUser {
 	}
 
 	public hasRole (role: string): boolean {
-		if (this.member == null) return false
+		if (this.member == null) throw new Error('User is not a member of this server')
 		return this.member.roles.cache.has(role)
+	}
+
+	public async giveRole (role: string): Promise<void> {
+		if (this.member == null) throw new Error('User is not a member of this server')
+		await this.member.roles.add(role)
+	}
+
+	public async removeRole (role: string): Promise<void> {
+		if (this.member == null) throw new Error('User is not a member of this server')
+		await this.member.roles.remove(role)
 	}
 }
 

@@ -74,6 +74,8 @@ export declare class ArmoredUser {
     member?: GuildMember;
     constructor(user: User, member?: GuildMember);
     hasRole(role: string): boolean;
+    giveRole(role: string): Promise<void>;
+    removeRole(role: string): Promise<void>;
 }
 export declare class ArmoredClient {
     constructor(_client: Client);
