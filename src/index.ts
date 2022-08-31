@@ -173,9 +173,10 @@ export class DiscordBot implements IDiscordBot {
 	}
 
 	private async initActions (): Promise<void> {
+		const currentActions = Object.values(this.actions).map((x) => x.asContext())
 		const botifulActions = [
-			new HelpAction(this.emitter),
-			new ManCommand(this.emitter)
+			new HelpAction(this.emitter, currentActions),
+			new ManCommand(this.emitter, currentActions)
 		]
 		this.loadActions(...botifulActions)
 		const actionsInit = Object.values(this.actions).map(

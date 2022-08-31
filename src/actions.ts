@@ -11,7 +11,8 @@ export class HelpAction implements IAction<{}> {
 
 	private readonly actions: ActionContext[] = []
 
-	constructor (emitter: EventEmitter) {
+	constructor (emitter: EventEmitter, current?: ActionContext[]) {
+		if (current != null) this.actions.push(...current)
 		emitter.on('actionLoaded', (x: ActionContext) => {
 			this.actions.push(x)
 		})
@@ -26,7 +27,7 @@ export class HelpAction implements IAction<{}> {
 	}
 
 	private parseHelpString (actionList: ActionContext[]): string {
-		const header = '**:botName: actions:**\n'
+		const header = '**Actions:**\n\n'
 		const actionsText = actionList
 			.map((x) => `${`\`:prefix:${x.name}\``}: ${x.description}`)
 			.join('\n\n')
@@ -37,14 +38,15 @@ export class HelpAction implements IAction<{}> {
 export class ManCommand implements IAction<{}> {
 	public readonly name = 'man'
 	public readonly description =
-		'Displays the manual entry for an action'
+		'Displays in-depth help for an action'
 
 	public readonly man = '!man <command>'
 	public readonly admin = false
 
 	private readonly actions: ActionContext[] = []
 
-	constructor (emitter: EventEmitter) {
+	constructor (emitter: EventEmitter, current?: ActionContext[]) {
+		if (current != null) this.actions.push(...current)
 		emitter.on('actionLoaded', (x: ActionContext) => {
 			this.actions.push(x)
 		})
