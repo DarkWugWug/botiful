@@ -178,12 +178,12 @@ export class ArmoredMessage {
 
 	public async respond (response: string): Promise<void> {
 		const channel = this.message.channel
-		doTyping(channel, 500)
+		await doTyping(channel, 500)
 		await channel.send(this.formatter.fmt(response))
 	}
 
 	public async reply (response: string): Promise<void> {
-		doTyping(this.message.channel, 500)
+		await doTyping(this.message.channel, 500)
 		await this.message.reply(this.formatter.fmt(response))
 	}
 
