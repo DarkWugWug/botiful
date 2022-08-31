@@ -12,12 +12,12 @@ export declare class HelpAction implements IAction<{}> {
 }
 export declare class ManCommand implements IAction<{}> {
     readonly name = "man";
-    readonly description = "Displays the manual entry for a specified command";
+    readonly description = "Displays the manual entry for an action";
     readonly man = "!man <command>";
     readonly admin = false;
     private actions;
     constructor(actions: ActionContext[]);
-    run(message: Message, store: Store<{}>, logger: Logger): Promise<void>;
+    run(message: Message, _store: Store<{}>, _logger: Logger): Promise<void>;
     replaceActionList(actions: ActionContext[]): void;
 }
 //# sourceMappingURL=actions.d.ts.map

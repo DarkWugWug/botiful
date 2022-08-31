@@ -36,7 +36,7 @@ export class HelpAction implements IAction<{}> {
 export class ManCommand implements IAction<{}> {
 	public readonly name = 'man'
 	public readonly description =
-		'Displays the manual entry for a specified command'
+		'Displays the manual entry for an action'
 
 	public readonly man = '!man <command>'
 	public readonly admin = false
@@ -47,21 +47,22 @@ export class ManCommand implements IAction<{}> {
 		this.actions = actions
 	}
 
-	public async run (message: Message, store: Store<{}>, logger: Logger): Promise<void> {
-		// if(!args[0]) {
-		//     msg.channel.send("You must pass in a command to look up the manual entry for.");
-		//     return;
-		// }
-		// const command = bot.getAction(args[0]);
-		// if(!command) {
-		//     msg.channel.send(`Could not find the command '${args[0]}'.`);
-		//     return;
-		// }
-		// if(!command.man) {
-		//     msg.channel.send(`The '${args[0]}' command does not have a manual entry.`);
-		//     return;
-		// }
-		// msg.channel.send(format(command.man, bot));
+	public async run (message: Message, _store: Store<{}>, _logger: Logger): Promise<void> {
+		const command = message.asCommand().subcommand()
+		if (command.command == null) {
+			await message.reply('What should I lookup? Example: `:prefix:man help`')
+			return
+		}
+		const action = this.actions.find((x) => x.name === command.command)
+		if (action == null) {
+			await message.reply(`\`:prefix:${command.command}\` isn't an action`)
+			return
+		}
+		if (action.man == null) {
+			await message.reply(`\`:prefix:${action.name}\`:\n**Description:**\t${action.description}\n`)
+		} else {
+			await message.reply(`\`:prefix:${action.name}\`:\n**Description:**\t${action.description}\n**Usage:**\t${action.man}`)
+		}
 	}
 
 	public replaceActionList (actions: ActionContext[]): void {
