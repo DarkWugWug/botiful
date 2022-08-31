@@ -47,7 +47,7 @@ export class DiscordBot implements IDiscordBot {
 		this.client = new Client({
 			intents: config.intents
 		})
-		this.formatter = new Formatter(this.prefix, this.adminRole)
+		this.formatter = new Formatter(this.prefix, this.adminRole, this.client)
 		this.store = persist
 	}
 
