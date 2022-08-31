@@ -10,8 +10,9 @@ export class AdminAccessMiddleware implements IMiddleware<AdminAccessData> {
 		this.roleName = roleName
 	}
 
-	public async init (_privateData: Store<AdminAccessData>, _logger: Logger, client: Client): Promise<void> {
+	public async init (_privateData: Store<AdminAccessData>, logger: Logger, client: Client): Promise<void> {
 		if (client.guildsHaveRole(this.roleName)) return
+		logger.warn(`Not all guilds have role named ${this.roleName}. Creating new role for the admin middleware.`)
 		await client.createRoleInGuilds(this.roleName, 'RANDOM')
 	}
 
@@ -55,9 +56,10 @@ export class RbacMiddleware implements IMiddleware<RbacData> {
 		emitter.on('actionLoaded', (action: ActionContext) => this.addActionRoles(action))
 	}
 
-	public async init (_privateData: Store<AdminAccessData>, _logger: Logger, client: Client): Promise<void> {
+	public async init (_privateData: Store<AdminAccessData>, logger: Logger, client: Client): Promise<void> {
 		for (const role of this.roles) {
 			if (!client.guildsHaveRole(role)) {
+				logger.warn(`Not all guilds have role named ${role}. Creating new role for the rbac middleware (it's being used by some loaded action).`)
 				await client.createRoleInGuilds(role)
 			}
 		}

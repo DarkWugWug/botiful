@@ -8,7 +8,7 @@ export declare class AdminAccessMiddleware implements IMiddleware<AdminAccessDat
     readonly name = "adminRoleAccessControl";
     private readonly roleName;
     constructor(roleName: string);
-    init(_privateData: Store<AdminAccessData>, _logger: Logger, client: Client): Promise<void>;
+    init(_privateData: Store<AdminAccessData>, logger: Logger, client: Client): Promise<void>;
     apply(action: ActionContext, message: Message, data: Store<AdminAccessData>, logger: Logger): Promise<boolean>;
 }
 interface RbacData {
@@ -18,7 +18,7 @@ export declare class RbacMiddleware implements IMiddleware<RbacData> {
     readonly name = "roleBasedAccessControl";
     private readonly roles;
     constructor(emitter: EventEmitter, actions: ActionContext[]);
-    init(_privateData: Store<AdminAccessData>, _logger: Logger, client: Client): Promise<void>;
+    init(_privateData: Store<AdminAccessData>, logger: Logger, client: Client): Promise<void>;
     apply(action: ActionContext, message: Message, data: Store<RbacData>, logger: Logger): Promise<boolean>;
     private addActionRoles;
 }
