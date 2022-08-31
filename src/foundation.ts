@@ -270,6 +270,11 @@ export class ArmoredUser {
 		})
 		return new PlayerSubscription(voiceConnection, player)
 	}
+
+	public isInVoiceChannel (): boolean {
+		if (this.member == null) throw new Error(`${this.tag} isn't a member of this server`)
+		return this.member.voice.channel != null
+	}
 }
 
 export class ArmoredClient {

@@ -32,7 +32,7 @@ export class AdminAccessMiddleware implements IMiddleware<AdminAccessData> {
 			count++
 			await data.setItem(key, count, 15 * 60 * 1000)
 			logger.warn(
-				`Admin action denied for user ${message.author.tag} involving ${action.name}. Tried ${count} times in the past 15 minutes.`
+				`Admin action denied for user ${message.author.tag} invoking ${action.name}. Tried ${count} times in the past 15 minutes.`
 			)
 			logger.debug(
 				`Needed a role of ${this.roleName}, but got [ ${message.author.getRoles().join(', ')} ]`
@@ -83,7 +83,7 @@ export class RbacMiddleware implements IMiddleware<RbacData> {
 			count++
 			await data.setItem(key, count, 15 * 60 * 1000)
 			logger.warn(
-				`Role base access denied for user ${message.author.tag} involving ${action.name}. Tried ${count} times in the past 15 minutes.`
+				`Role base access denied for user ${message.author.tag} invoking ${action.name}. Tried ${count} times in the past 15 minutes.`
 			)
 			logger.debug(
 				`Needed any role in [ ${action.roles.join(', ')} ], but got [ ${message.author.getRoles().join(', ')} ]`

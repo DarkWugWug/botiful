@@ -76,6 +76,7 @@ export declare class ArmoredUser {
     giveRole(role: string): Promise<void>;
     removeRole(role: string): Promise<void>;
     tryJoinInVoice(selfDeaf?: boolean, selfMute?: boolean): Promise<PlayerSubscription>;
+    isInVoiceChannel(): boolean;
 }
 export declare class ArmoredClient {
     private readonly client;
