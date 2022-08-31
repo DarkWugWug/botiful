@@ -166,9 +166,7 @@ export class ArmoredMessage {
 		if (message.content == null || message.author == null) { throw new Error("Message doesn't have content or author") }
 		if (message.member == null) this.author = new ArmoredUser(message.author)
 		else this.author = new ArmoredUser(message.author, message.member)
-		// TODO: Remove log
-		console.log(`Mentioned Users: [ ${[...message.mentions.users.values()].join(', ')} ]`)
-		this.mentionedUsers = (Object.values(message.mentions.users) as User[])
+		this.mentionedUsers = [...message.mentions.users.values()]
 			.map((x) => {
 				if (message.mentions.members == null) return new ArmoredUser(x)
 				else if (message.mentions.members.get(x.id) != null) return new ArmoredUser(x, message.mentions.members.get(x.id))
