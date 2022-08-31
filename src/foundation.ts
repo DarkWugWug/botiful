@@ -156,7 +156,7 @@ export class ArmoredMessage {
 	public author: ArmoredUser
 	public fromGuildOwner?: boolean
 	public guildId?: string
-	public mentionedUsers: ArmoredUser[] = []
+	public mentionedUsers: ArmoredUser[]
 	public content: string
 
 	private readonly message: Message | PartialMessage
@@ -169,11 +169,12 @@ export class ArmoredMessage {
 		const mentionedUser = Object.values(message.mentions.users)
 		if (message.mentions.members != null) {
 			const mentionedMembers = Object.values(message.mentions.members)
+			this.mentionedUsers = []
 			for (let i = 0; i < mentionedUser.length; i++) {
 				this.mentionedUsers.push(new ArmoredUser(mentionedUser[i], mentionedMembers[i]))
 			}
 		} else {
-			this.mentionedUsers.push(...mentionedUser.map((x) => new ArmoredUser(x)))
+			this.mentionedUsers = mentionedUser.map((x) => new ArmoredUser(x))
 		}
 		this.guildId = message.guildId === null ? undefined : message.guildId
 		this.fromGuildOwner = message.guild?.ownerId === this.author.id
