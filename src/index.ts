@@ -94,7 +94,7 @@ export class DiscordBot implements IDiscordBot {
 		const isLoaded = Object.keys(this.actions).find(
 			(x) => x === command.command
 		)
-		if (isLoaded != null) {
+		if (isLoaded == null) {
 			let helpCmd = 'help'
 			for (const action of Object.values(this.actions)) {
 				if (action instanceof HelpAction) helpCmd = action.name
