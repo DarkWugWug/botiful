@@ -59,7 +59,6 @@ export class ManCommand implements IAction<{}> {
 			return
 		}
 		const action = this.actions.find((x) => x.name === actionStr)
-		logger.debug(this.actions)
 		if (action == null) {
 			await message.reply(`\`:prefix:${actionStr}\` isn't an action`)
 			return
