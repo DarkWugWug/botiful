@@ -85,6 +85,5 @@ export declare class Command {
     readonly command: string;
     readonly args: string[];
     constructor(stdin: string);
-    subcommand(): Command;
 }
 //# sourceMappingURL=foundation.d.ts.map

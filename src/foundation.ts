@@ -303,16 +303,19 @@ export class Command {
 
 	constructor (stdin: string) {
 		const cmdRegex = /("[^"]*"|\S+)/g
-		const parsedCmd = stdin.match(cmdRegex)
-		if (parsedCmd == null) {
+		const matches = stdin.match(cmdRegex)
+		// Everything that's separated by spaces, unless in double-quotes.
+		// In that case return that as one arg even if it includes spaces
+		if (matches == null) {
 			this.command = ''
 			this.args = []
-		} else {
-			const cmdArgs = (parsedCmd.map((arg) =>
-				/^".*"$/.test(arg) ? arg.substring(1, arg.length - 2) : arg
-			))
-			this.command = cmdArgs[0].substring(1)
-			this.args = cmdArgs.slice(1)
+			return
 		}
+		const cmdArgs = matches.map((arg) =>
+			/^".*"$/.test(arg) ? arg.replace('"', '') : arg
+		)
+		this.command = cmdArgs[0].substring(1)
+		// this.args = cmdArgs.slice(1)
+		this.args = ['REEEEE']
 	}
 }
