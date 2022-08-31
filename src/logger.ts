@@ -1,25 +1,19 @@
 import { createLogger, format, Logger, LoggerOptions, transports } from 'winston'
-import { TransformableInfo } from 'logform'
 import { ensureFileSync } from 'fs-extra'
-
 import { IDiscordBotConfigComplete } from './config'
 
-function formatNow (): string {
-	const dt = new Date()
-	return dt.toLocaleString()
-}
-
-function botifulFormat (info: TransformableInfo, opts?: any): TransformableInfo | boolean {
-	const message = typeof info.message === 'string'
-		? info.message
-		: '\n' + JSON.stringify(info.message, null, 2)
-	info.message = `${formatNow()} [${info.level}]: ${message}`
-	return info
-}
+const { combine, colorize, timestamp, align, printf } = format
 
 export function initLogger (config: IDiscordBotConfigComplete): Logger {
 	const loggerOptions: LoggerOptions = {
-		format: format(botifulFormat)(),
+		format: combine(
+			colorize(),
+			// Adds .timestamp property
+			// https://github.com/winstonjs/logform#timestamp
+			timestamp(),
+			align(),
+			printf((info) => `[${info.timestamp as string}] [${info.level}]: ${JSON.stringify(info.message, null, 2)}`)
+		),
 		level: config.loggerLevel,
 		transports: []
 	}
