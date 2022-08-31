@@ -164,7 +164,7 @@ export class ArmoredMessage {
 
 	constructor (message: Message | PartialMessage, formatter: Formatter) {
 		if (message.content === null || message.author == null) { throw new Error("Message doesn't have content or author") }
-		this.author = new ArmoredUser(message.author)
+		this.author = new ArmoredUser(message.author, message.member)
 		this.mentionedUsers = message.mentions.users.map(
 			(x) => new ArmoredUser(x)
 		)
@@ -235,7 +235,7 @@ export class ArmoredMessage {
 				`${this.author.username} isn't a member of this server`
 			)
 		}
-		return this.message.member.roles.cache.has(role)
+		return this.message.member.roles.cache.some((x) => x.name === role)
 	}
 
 	public async authorHasAnyRole (role: string | string[]): Promise<boolean> {
