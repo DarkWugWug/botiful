@@ -47,13 +47,14 @@ export class ManCommand implements IAction<{}> {
 		this.actions = actions
 	}
 
-	public async run (message: Message, _store: Store<{}>, _logger: Logger): Promise<void> {
+	public async run (message: Message, _store: Store<{}>, logger: Logger): Promise<void> {
 		const actionStr = message.asCommand().args[0]
 		if (actionStr == null) {
 			await message.reply('What should I lookup? Example: `:prefix:man help`')
 			return
 		}
 		const action = this.actions.find((x) => x.name === actionStr)
+		logger.debug(this.actions)
 		if (action == null) {
 			await message.reply(`\`:prefix:${actionStr}\` isn't an action`)
 			return

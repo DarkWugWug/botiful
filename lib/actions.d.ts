@@ -17,7 +17,7 @@ export declare class ManCommand implements IAction<{}> {
     readonly admin = false;
     private actions;
     constructor(actions: ActionContext[]);
-    run(message: Message, _store: Store<{}>, _logger: Logger): Promise<void>;
+    run(message: Message, _store: Store<{}>, logger: Logger): Promise<void>;
     replaceActionList(actions: ActionContext[]): void;
 }
 //# sourceMappingURL=actions.d.ts.map
