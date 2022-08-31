@@ -95,9 +95,14 @@ export class DiscordBot implements IDiscordBot {
 			(x) => x === command.command
 		)
 		if (isLoaded != null) {
+			let helpCmd = 'help'
+			for (const action of Object.values(this.actions)) {
+				if (action instanceof HelpAction) helpCmd = action.name
+			}
 			await message.reply(
-				`\`:prefix:${command.command}\` is not a command. Use \`:prefix:${HelpAction.name}\` to see all commands.`
+				`\`:prefix:${command.command}\` is not a command. Use \`:prefix:${helpCmd}\` to see all commands.`
 			)
+			return
 		}
 		const action = this.actions[command.command]
 		const authorized = await this.applyMiddleware(

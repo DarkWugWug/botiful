@@ -2,7 +2,7 @@ import { createLogger, format, Logger, LoggerOptions, transports } from 'winston
 import { ensureFileSync } from 'fs-extra'
 import { IDiscordBotConfigComplete } from './config'
 
-const { combine, colorize, timestamp, align, printf, prettyPrint } = format
+const { combine, colorize, timestamp, align, printf } = format
 
 export function initLogger (config: IDiscordBotConfigComplete): Logger {
 	const loggerOptions: LoggerOptions = {
