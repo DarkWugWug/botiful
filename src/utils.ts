@@ -3,8 +3,8 @@ import { Client, TextBasedChannel } from 'discord.js'
 export class Formatter {
 	static substitutions: Record<string, (self: Formatter) => string> = {
 		':prefix:': (self) => self.prefix,
-		':adminRole': (self) => self.adminRole,
-		':botName': (self) => {
+		':adminRole:': (self) => self.adminRole,
+		':botName:': (self) => {
 			if (self.client.user != null) {
 				return self.client.user.username
 			} else {
