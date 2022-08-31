@@ -62,9 +62,6 @@ export declare class ArmoredMessage {
     constructor(message: Message | PartialMessage, formatter: Formatter);
     respond(response: string): Promise<void>;
     reply(response: string): Promise<void>;
-    tryJoinAuthorInVoice(selfDeaf?: boolean, selfMute?: boolean): Promise<PlayerSubscription>;
-    authorHasRole(role: string): Promise<boolean>;
-    authorHasAnyRole(role: string | string[]): Promise<boolean>;
     asCommand(): Command;
     private dispatchError;
 }
@@ -76,8 +73,10 @@ export declare class ArmoredUser {
     constructor(user: User, member?: GuildMember);
     getRoles(): string[];
     hasRole(role: string): boolean;
+    hasAnyRole(roles: string[]): boolean;
     giveRole(role: string): Promise<void>;
     removeRole(role: string): Promise<void>;
+    tryJoinInVoice(selfDeaf?: boolean, selfMute?: boolean): Promise<PlayerSubscription>;
 }
 export declare class ArmoredClient {
     constructor(_client: Client);

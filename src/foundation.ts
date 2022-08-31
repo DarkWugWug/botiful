@@ -195,73 +195,8 @@ export class ArmoredMessage {
 		await this.message.reply(this.formatter.fmt(response))
 	}
 
-	public async tryJoinAuthorInVoice (
-		selfDeaf = true,
-		selfMute = false
-	): Promise<PlayerSubscription> {
-		if (this.message.member == null) {
-			throw await this.dispatchError(
-				`${this.author.username} isn't a member of this server`
-			)
-		}
-		if (
-			this.message.member.voice.channel == null ||
-      this.message.member.voice.channelId == null
-		) {
-			throw await this.dispatchError(
-				`${this.author.username} isn't in a voice channel`
-			)
-		}
-		if (this.message.guild == null || this.guildId == null) {
-			throw await this.dispatchError(
-				"Hmmm... you didn't send this in a server. I can only join server voice chats."
-			)
-		}
-		const memberVoice = this.message.member.voice // The checks above should ensure this exists
-		const player = createAudioPlayer()
-		try {
-			const voiceConnection = joinVoiceChannel({
-				guildId: this.guildId,
-				channelId: memberVoice.id,
-				// https://discordjs.guide/voice/voice-connections.html#creation
-				adapterCreator:
-					this.message.guild.voiceAdapterCreator as DiscordGatewayAdapterCreator,
-				selfDeaf,
-				selfMute
-			})
-			return new PlayerSubscription(voiceConnection, player)
-		} catch (err) {
-			throw await this.dispatchError(
-				`I was looking for '${this.message.member.voice.channel.name}', but couldn't find it. Can :adminRole: help us?`
-			)
-		}
-	}
-
-	public async authorHasRole (role: string): Promise<boolean> {
-		if (this.message.member == null) {
-			throw await this.dispatchError(
-				`${this.author.username} isn't a member of this server`
-			)
-		}
-		return this.message.member.roles.cache.some((x) => x.name === role)
-	}
-
-	public async authorHasAnyRole (role: string | string[]): Promise<boolean> {
-		if (this.message.member == null) {
-			throw await this.dispatchError(
-				`${this.author.username} isn't a member of this server`
-			)
-		}
-		return this.message.member.roles.cache.hasAny(...role)
-	}
-
 	public asCommand (): Command {
 		return new Command(this.content)
-	}
-
-	private async dispatchError (text: string): Promise<Error> {
-		await this.reply(text)
-		return new Error(text)
 	}
 }
 
@@ -281,16 +216,17 @@ export class ArmoredUser {
 
 	public getRoles (): string[] {
 		if (this.member == null) throw new Error('User is not a member of this server')
-		const roles = []
-		for (const role of this.member.roles.cache.values()) {
-			roles.push(role.name)
-		}
-		return roles
+		return Object.values(this.member.roles.cache).map((x) => x.name)
 	}
 
 	public hasRole (role: string): boolean {
 		if (this.member == null) throw new Error('User is not a member of this server')
-		return this.member.roles.cache.has(role)
+		return this.member.roles.cache.some((x) => x.name === role)
+	}
+
+	public hasAnyRole (roles: string[]): boolean {
+		if (this.member == null) throw new Error('User is not a member of this server')
+		return this.member.roles.cache.some((x) => roles.some((y) => x.name === y))
 	}
 
 	public async giveRole (role: string): Promise<void> {
@@ -301,6 +237,29 @@ export class ArmoredUser {
 	public async removeRole (role: string): Promise<void> {
 		if (this.member == null) throw new Error('User is not a member of this server')
 		await this.member.roles.remove(role)
+	}
+
+	public async tryJoinInVoice (
+		selfDeaf = true,
+		selfMute = false
+	): Promise<PlayerSubscription> {
+		if (this.member == null) throw new Error(`${this.tag} isn't a member of this server`)
+		if (
+			this.member.voice.channel == null ||
+      this.member.voice.channelId == null
+		) throw new Error(`${this.tag} isn't in a voice channel`)
+		const memberVoice = this.member.voice // The checks above should ensure this exists
+		const player = createAudioPlayer()
+		const voiceConnection = joinVoiceChannel({
+			guildId: this.member.guild.id,
+			channelId: memberVoice.id,
+			// https://discordjs.guide/voice/voice-connections.html#creation
+			adapterCreator:
+				this.member.guild.voiceAdapterCreator as DiscordGatewayAdapterCreator,
+			selfDeaf,
+			selfMute
+		})
+		return new PlayerSubscription(voiceConnection, player)
 	}
 }
 

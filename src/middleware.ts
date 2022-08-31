@@ -16,7 +16,7 @@ export class AdminAccessMiddleware implements IMiddleware<AdminAccessData> {
 		logger: Logger
 	): Promise<boolean> {
 		if (!action.admin) return true
-		if (await message.authorHasRole(this.roleName)) {
+		if (await message.author.hasRole(this.roleName)) {
 			return true
 		} else {
 			const key = `${message.author.id}:deniedCount`
@@ -49,7 +49,7 @@ export class RbacMiddleware implements IMiddleware<RbacData> {
 		if ((action.roles == null) || action.roles.length === 0) {
 			return true
 		}
-		if (await message.authorHasAnyRole(action.roles)) {
+		if (await message.author.hasAnyRole(action.roles)) {
 			return true
 		} else {
 			const key = `${message.author.id}:deniedCount`
