@@ -1,8 +1,11 @@
-import { Logger } from "winston";
-import { Client, Message, PartialMessage } from "discord.js";
-import { IDiscordBotConfig } from "./config";
-import { IAction, IMiddleware, IDiscordBot } from "./foundation";
-export * from "./foundation";
+import { Client, Message, PartialMessage } from 'discord.js';
+import { Logger } from 'winston';
+import { IDiscordBotConfig } from './config';
+import { IAction, IDiscordBot, IMiddleware } from './foundation';
+import { PrivateData } from './storage';
+export { IAction, ActionContext, IMiddleware, IDiscordBot, ArmoredMessage as Message, ArmoredUser as User } from './foundation';
+export { PrivateStorage as Store } from './storage';
+export { Logger } from 'winston';
 export declare class DiscordBot implements IDiscordBot {
     readonly config: {
         [key: string]: any;
@@ -11,28 +14,23 @@ export declare class DiscordBot implements IDiscordBot {
     readonly client: Client;
     readonly adminRole: string;
     readonly prefix: string;
-    private _actions;
-    private _middlewares;
-    private store;
+    private actions;
+    private middleware;
+    private readonly store;
     private readonly token;
+    private readonly formatter;
     constructor(options: IDiscordBotConfig);
-    getAction(command: string): IAction;
-    getActions(): IAction[];
-    getMiddleware(name: string): IMiddleware;
-    getMiddlewares(): IMiddleware[];
-    logout(): Promise<Logger>;
+    listActions(): string[];
+    listMiddlewares(): string[];
+    logout(): Promise<void>;
     start(): Promise<void>;
     runAction(msg: Message | PartialMessage): Promise<void>;
-    loadActions(actions: IAction[]): void;
-    loadActions(action_map: {
-        [name: string]: IAction;
-    }): void;
-    loadMiddleware(middleware: IMiddleware): void;
-    loadMiddleware(middleware: IMiddleware[]): void;
+    loadActions<T extends PrivateData>(actionsParam: Array<IAction<T>> | IAction<T>): void;
+    loadMiddleware<T extends PrivateData>(middlewareParam: Array<IMiddleware<T>> | IMiddleware<T>): void;
     private initStorage;
     private initMiddlewares;
     private initActions;
     private init;
-    private isAuthorized;
+    private applyMiddleware;
 }
 //# sourceMappingURL=index.d.ts.map

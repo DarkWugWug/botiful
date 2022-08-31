@@ -20,6 +20,6 @@ export interface IDiscordBotConfigComplete extends IDiscordBotConfig {
         [key: string]: any;
     };
 }
-export declare const default_config: Omit<IDiscordBotConfigComplete, "token" | "intents">;
+export declare const defaultConfig: Omit<IDiscordBotConfigComplete, 'token' | 'intents'>;
 export declare function getCompleteConfig(config: IDiscordBotConfig): IDiscordBotConfigComplete;
 //# sourceMappingURL=config.d.ts.map

@@ -1,5 +1,4 @@
-import { Logger } from "winston";
-import { IDiscordBotConfigComplete } from "./config";
-export declare const botFormat: import("logform").FormatWrap;
+import { Logger } from 'winston';
+import { IDiscordBotConfigComplete } from './config';
 export declare function initLogger(config: IDiscordBotConfigComplete): Logger;
 //# sourceMappingURL=logger.d.ts.map
