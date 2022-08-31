@@ -315,8 +315,4 @@ export class Command {
 			this.args = cmdArgs.slice(1)
 		}
 	}
-
-	public subcommand (): Command {
-		return new Command(this.args.join(' '))
-	}
 }

@@ -1,14 +1,13 @@
-import { PrivateStorage } from '..';
-import persist from 'node-persist';
+// import { Store } from '..'
 
 describe('Public Storage Interface', () => {
-    beforeAll(async () => {
-        await persist.init({ dir: './data/'});
-    })
+	beforeAll(async () => {
+		// await Store.init({ dir: './data/' })
+	})
 
-    describe('Simple Gets', () => {
-        it('should return the expected value', () => {
+	describe('Simple Gets', () => {
+		it('should return the expected value', () => {
 
-        })
-    })
+		})
+	})
 })
