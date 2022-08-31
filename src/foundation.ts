@@ -167,7 +167,7 @@ export class ArmoredMessage {
 		if (message.member == null) this.author = new ArmoredUser(message.author)
 		else this.author = new ArmoredUser(message.author, message.member)
 		// TODO: Remove log
-		console.log(`Mentioned Users: [ ${Object.values(message.mentions.users).join(', ')} ]`)
+		console.log(`Mentioned Users: [ ${[...message.mentions.users.values()].join(', ')} ]`)
 		this.mentionedUsers = (Object.values(message.mentions.users) as User[])
 			.map((x) => {
 				if (message.mentions.members == null) return new ArmoredUser(x)
