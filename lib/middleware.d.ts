@@ -6,6 +6,7 @@ export declare class AdminAccessMiddleware implements IMiddleware<AdminAccessDat
     readonly name = "adminRoleAccessControl";
     private readonly roleName;
     constructor(roleName: string);
+    init(privateData: Store<AdminAccessData>, logger: Logger): Promise<void>;
     apply(action: ActionContext, message: Message, data: Store<AdminAccessData>, logger: Logger): Promise<boolean>;
 }
 interface RbacData {

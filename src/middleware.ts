@@ -9,6 +9,12 @@ export class AdminAccessMiddleware implements IMiddleware<AdminAccessData> {
 		this.roleName = roleName
 	}
 
+	public async init (privateData: Store<AdminAccessData>, logger: Logger): Promise<void> {
+		// TODO: Use case for ArmoredClient
+		//       Pass in here to allow this middleware to ensure roles exist (like the adminRole)
+		//       Will need to be done for every guild this bot is a part of
+	}
+
 	public async apply (
 		action: ActionContext,
 		message: Message,
