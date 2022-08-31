@@ -312,10 +312,9 @@ export class Command {
 			return
 		}
 		const cmdArgs = matches.map((arg) =>
-			/^".*"$/.test(arg) ? arg.replace('"', '') : arg
+			/^".*"$/.test(arg) ? arg.substring(1, arg.length - 1) : arg
 		)
 		this.command = cmdArgs[0].substring(1)
-		// this.args = cmdArgs.slice(1)
-		this.args = ['REEEEE']
+		this.args = cmdArgs.slice(1)
 	}
 }
