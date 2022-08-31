@@ -2,7 +2,7 @@ import { createLogger, format, Logger, LoggerOptions, transports } from 'winston
 import { ensureFileSync } from 'fs-extra'
 import { IDiscordBotConfigComplete } from './config'
 
-const { combine, colorize, timestamp, align, printf } = format
+const { combine, colorize, timestamp, align, printf, prettyPrint } = format
 
 export function initLogger (config: IDiscordBotConfigComplete): Logger {
 	const loggerOptions: LoggerOptions = {
@@ -12,7 +12,7 @@ export function initLogger (config: IDiscordBotConfigComplete): Logger {
 			// https://github.com/winstonjs/logform#timestamp
 			timestamp(),
 			align(),
-			printf((info) => `[${info.timestamp as string}] [${info.level}]: ${JSON.stringify(info.message, null, 2)}`)
+			printf((info) => `[${info.timestamp as string}] [${info.level}]: ${info.message as string}`)
 		),
 		level: config.loggerLevel,
 		transports: []
