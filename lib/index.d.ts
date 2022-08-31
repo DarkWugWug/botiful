@@ -13,6 +13,7 @@ export declare class DiscordBot implements IDiscordBot {
     readonly prefix: string;
     private _actions;
     private _middlewares;
+    private store;
     private readonly token;
     constructor(options: IDiscordBotConfig);
     getAction(command: string): IAction;
@@ -28,6 +29,9 @@ export declare class DiscordBot implements IDiscordBot {
     }): void;
     loadMiddleware(middleware: IMiddleware): void;
     loadMiddleware(middleware: IMiddleware[]): void;
+    private initStorage;
+    private initMiddlewares;
+    private initActions;
     private init;
     private isAuthorized;
 }

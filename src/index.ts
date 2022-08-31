@@ -1,32 +1,43 @@
-import { Logger } from "winston";
 import { Client, Message, PartialMessage } from "discord.js";
 import persist, { LocalStorage } from "node-persist";
+import { Logger } from "winston";
 
-import { IDiscordBotConfig, getCompleteConfig } from "./config";
-import { IAction, ActionMap, IMiddleware, IDiscordBot, SemiPartialMessage, MiddlewareMap, ActionRun } from "./foundation";
+import { HelpAction, ManCommand } from "./actions";
+import { getCompleteConfig, IDiscordBotConfig } from "./config";
+import {
+	ActionContext, ArmoredAction, ArmoredClient, ArmoredMessage, ArmoredMiddleware, IAction,
+	IDiscordBot, IMiddleware
+} from "./foundation";
 import { initLogger } from "./logger";
+import { AdminAccessMiddleware, RbacMiddleware, UsernameAccessMiddleware } from "./middleware";
+import { PrivateData } from "./storage";
+import { Formatter } from "./utils";
 
-import { helpCommand, manCommand } from "./actions";
-import { adminMiddleware, rolesMiddleware, usersMiddleware } from "./middleware";
+export {
+    IAction,
+    ActionContext,
+    IMiddleware,
+    IDiscordBot,
+    ArmoredMessage as Message,
+    ArmoredUser as User,
+} from "./foundation";
+export { PrivateStorage as Store } from "./storage";
+export { Logger } from "winston";
 
-// TESting
-export * from "./foundation";
-
-export class DiscordBot implements IDiscordBot
-{
+export class DiscordBot implements IDiscordBot {
     public readonly config: { [key: string]: any };
     public readonly log: Logger;
     public readonly client: Client;
     public readonly adminRole: string;
     public readonly prefix: string;
 
-    private _actions: ActionMap = {  };
-    private _middlewares: MiddlewareMap = {   };
+    private actions: Record<string, ArmoredAction<any>> = {};
+    private middleware: Record<string, ArmoredMiddleware<any>> = {};
     private store: LocalStorage;
     private readonly token: string;
+    private readonly formatter: Formatter;
 
-    public constructor(options: IDiscordBotConfig)
-    {
+    public constructor(options: IDiscordBotConfig) {
         const config = getCompleteConfig(options);
 
         this.log = initLogger(config);
@@ -35,155 +46,201 @@ export class DiscordBot implements IDiscordBot
         this.token = config.token;
         this.adminRole = config.admin;
         this.client = new Client({
-            intents: config.intents
+            intents: config.intents,
         });
+        this.formatter = new Formatter(this.prefix, this.adminRole);
         this.store = persist;
     }
-    public getAction(command: string) { return this._actions[command]; }
-    public getActions() { return Object.values(this._actions); }
 
-    public getMiddleware(name: string) { return this._middlewares[name]; }
-    public getMiddlewares() { return Object.values(this._middlewares) }
-
-    public async logout()
-    {
-        this.log.debug("Bot shutting down...");
-        return Promise.all(this.getActions()
-                .filter(action => action.cleanup)
-                .map(action => (action.cleanup as () => void | Promise<void>)())
-            )
-            .then(() => this.client.destroy())
-            .then(() => this.log.info("Bot logged out!"));
+    public listActions(): string[] {
+        return Object.keys(this.actions);
+    }
+    public listMiddlewares(): string[] {
+        return Object.keys(this.middleware);
     }
 
+    public async logout() {
+        this.log.debug("Bot shutting down...");
+        await this.client.destroy();
+        this.log.info("Bot logged out and destroyed");
+    }
 
-
-    public async start(): Promise<void>
-    {
+    public async start(): Promise<void> {
         await this.init();
         this.log.info("Starting Discord Bot...");
 
-        if(this.token.length === 0) { this.log.error("No token found!"); }
-        return this.client.login(this.token).then(() => {
-            this.log.info(`${this.client.user?.username} has logged in and started!`);
-        }).catch((err) => { this.log.error(err); });
-    }
-
-    public async runAction(msg: Message | PartialMessage): Promise<void>
-    {
-        if(!msg.content || !msg.author) { return; }
-        if(!msg.content.startsWith(this.prefix)
-            || msg.author.equals(this.client.user!)) { return; }
-
-        const cmd_regex = /("[^"]*"|\S+)/g;
-        let cmd_args = (msg.content.match(cmd_regex) || [  ])
-            .map((arg) => /^".*"$/.test(arg)
-                ? arg.substring(1, arg.length - 2)
-                : arg);
-        const cmd = cmd_args[0].substring(1);
-        cmd_args = cmd_args.slice(1);
-
-        let reply = `'${cmd}' is not a valid command!`;
-        const cmd_action = this._actions[cmd];
-        if(cmd_action)
-        {
-            const authorized = await this.isAuthorized(cmd_action, msg as SemiPartialMessage);
-            if(authorized)
-            {
-                const str = await cmd_action.run(cmd_args, msg as SemiPartialMessage, this);
-                reply = (str && (str.length > 0)) ? str : "";
-            }
-            else
-            {
-                reply = "You are not authorized to use this command!";
-            }
+        if (this.token.length === 0) {
+            this.log.error("No token found!");
         }
-        if(reply.length > 0) { msg.channel.send(reply); }
-    }
-
-    public loadActions(actions: IAction[]): void;
-    public loadActions(action_map: { [name: string]: IAction }): void;
-    public loadActions(actions_param: { [name: string]: IAction } | IAction[] | IAction): void
-    {
-        if(actions_param instanceof Array) {
-            actions_param.forEach((action) => { this._actions[action.name] = action; })
-        } else if(typeof actions_param === "object") {
-            Object.assign(this._actions, actions_param);
-        }
-    }
-
-    public loadMiddleware(middleware: IMiddleware): void;
-    public loadMiddleware(middleware: IMiddleware[]): void;
-    public loadMiddleware(middleware_param: IMiddleware | IMiddleware[]): void
-    {
-        if(middleware_param instanceof Array) {
-            middleware_param.forEach((middleware) => {
-                this._middlewares[middleware.name] = middleware
+        return this.client
+            .login(this.token)
+            .then(() => {
+                this.log.info(
+                    `${this.client.user?.username} has logged in and started!`
+                );
+            })
+            .catch((err) => {
+                this.log.error(err);
             });
+    }
+
+    public async runAction(msg: Message | PartialMessage) {
+        if (!msg.content || !msg.author) {
+            this.log.debug(
+                `Got message without content OR author. Ignoring...`
+            );
+            return;
+        }
+        if (msg.author.equals(this.client.user!)) return; // It's this bot's own message coming back to it; Do nothing
+        // TODO: Add Lexers as a capability to bot that would allow 'eager' running of code if certain phrases/keywords are present
+        if (!msg.content.startsWith(this.prefix)) return; // It's just a general text message not meant for this bot; Do nothing
+        const command = new Command(msg.content);
+        const message = new ArmoredMessage(msg, this.formatter);
+        const isLoaded = Object.keys(this.actions).find(
+            (x) => x === command.command
+        );
+        if (!isLoaded) {
+            message.reply(
+                `\`:prefix:${command.command}\` is not a command. Use \`:prefix:${HelpAction.name}\` to see all commands.`
+            );
+        }
+        const action = this.actions[command.command];
+        const authorized = await this.applyMiddleware(
+            action.asContext(),
+            message
+        );
+        if (!authorized) return; // For now it's best practice to let the middleware report back, though in the future this needs hardening
+        await action.runClient(message);
+    }
+
+    public loadActions<T extends PrivateData>(
+        actionsParam: IAction<T>[] | IAction<T>
+    ) {
+        if (actionsParam instanceof Array) {
+            for (const action of actionsParam) {
+                this.actions[action.name] = new ArmoredAction(
+                    action,
+                    this.store,
+                    this.log,
+                    new ArmoredClient(this.client)
+                );
+            }
         } else {
-            this._middlewares[middleware_param.name] = middleware_param;
+            this.actions[actionsParam.name] = new ArmoredAction(
+                actionsParam,
+                this.store,
+                this.log,
+                new ArmoredClient(this.client)
+            );
+        }
+    }
+
+    public loadMiddleware<T extends PrivateData>(
+        middlewareParam: IMiddleware<T>[] | IMiddleware<T>
+    ) {
+        if (middlewareParam instanceof Array) {
+            for (const middleware of middlewareParam) {
+                this.middleware[middleware.name] = new ArmoredMiddleware(
+                    middleware,
+                    this.store,
+                    this.log,
+                    new ArmoredClient(this.client)
+                );
+            }
+        } else {
+            this.middleware[middlewareParam.name] = new ArmoredMiddleware(
+                middlewareParam,
+                this.store,
+                this.log,
+                new ArmoredClient(this.client)
+            );
         }
     }
 
     private async initStorage() {
-        await this.store.init({ dir: "./data" });
+        await this.store.init({
+            dir: "./data",
+            expiredInterval: 1 * 60 * 1000,
+        });
         this.log.info("Initialized data store");
     }
 
     private async initMiddlewares() {
-        const botifulMiddleware = [adminMiddleware, rolesMiddleware, usersMiddleware];
+        const botifulMiddleware = [
+            new AdminAccessMiddleware(this.adminRole),
+            new RbacMiddleware(),
+            new UsernameAccessMiddleware(),
+        ];
         this.loadMiddleware(botifulMiddleware);
-        this.log.debug(`Loaded all middlewares: [ ${this.getMiddlewares().join(", ")} ]`);
-        const middlewaresWithInit = this.getMiddlewares()
-            .reduce((collect, mw) => {
-                if (mw.init) { collect.push(mw.init) }
-                return collect;
-            }, [] as Array<IMiddleware["init"]>);
+        const middlewaresWithInit = Object.values(this.middleware).map(
+            (x) => x.initializeClient
+        );
         await Promise.all(middlewaresWithInit);
-        this.log.debug(
-            `Initialized middlewares: [ ${middlewaresWithInit.join(", ")} ]`
+        this.log.info(
+            `Middlewares loaded and initialized: [ ${this.listMiddlewares().join(
+                ", "
+            )} ]`
         );
     }
 
     private async initActions() {
-        const botifulActions = [ helpCommand, manCommand ];
+        const actionContexts = Object.values(this.actions).map((x) =>
+            x.asContext()
+        );
+        const botifulActions = [
+            new HelpAction(actionContexts),
+            new ManCommand(),
+        ];
         this.loadActions(botifulActions);
-        this.log.debug(`Loaded all actions: [ ${this.getActions().join(', ')} ]`);
-        const actionsWithInit = this.getActions()
-            .reduce((collect, action) => {
-                if (action.init) collect.push(action.init);
-                return collect;
-            }, [] as Array<IAction["init"]>);
-        await Promise.all(actionsWithInit);
-        this.log.debug(
-            `Initialized actions: [ ${actionsWithInit.join(", ")} ]`
+        const actionsInit = Object.values(this.actions).map(
+            (x) => x.initializeClient
+        );
+        await Promise.all(actionsInit);
+        this.log.info(
+            `Actions loaded and initialized: [ ${this.listActions().join(
+                ", "
+            )} ]`
         );
     }
 
-    private async init(): Promise<void>
-    {
+    private async init(): Promise<void> {
         await this.initStorage();
-        await Promise.all([
-            this.initMiddlewares(),
-            this.initActions(),
-        ]);
+        await Promise.all([this.initMiddlewares(), this.initActions()]);
         this.client.on("messageCreate", (msg) => this.runAction(msg));
         this.client.on("messageUpdate", (oldMsg, newMsg) => {
-            if((oldMsg.content === newMsg.content)
-                || (newMsg.embeds && !oldMsg.embeds)
-                || (newMsg.embeds.length > 0 && oldMsg.embeds.length === 0)) { return; }
+            if (
+                oldMsg.content === newMsg.content ||
+                (newMsg.embeds && !oldMsg.embeds) ||
+                (newMsg.embeds.length > 0 && oldMsg.embeds.length === 0)
+            ) {
+                return;
+            }
             this.runAction(newMsg);
         });
     }
 
-    private async isAuthorized(action: IAction, message: SemiPartialMessage): Promise<boolean>
-    {
-        for(const mw of this.getMiddlewares())
-        {
-            if(!(await mw.apply(action, message, this))) {
+    private async applyMiddleware(
+        action: ActionContext,
+        message: ArmoredMessage
+    ): Promise<boolean> {
+        for (const name in this.middleware) {
+            if (!(await this.middleware[name].applyClient(action, message)))
                 return false;
-            }
         }
         return true;
+    }
+}
+
+class Command {
+    public readonly command: string;
+    public readonly args: Array<string>;
+
+    constructor(stdin: string) {
+        const cmdRegex = /("[^"]*"|\S+)/g;
+        let cmdArgs = (stdin.match(cmdRegex) || []).map((arg) =>
+            /^".*"$/.test(arg) ? arg.substring(1, arg.length - 2) : arg
+        );
+        this.command = cmdArgs[0].substring(1);
+        this.args = cmdArgs.slice(1);
     }
 }

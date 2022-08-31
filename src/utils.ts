@@ -1,11 +1,28 @@
-import { DiscordBot } from ".";
+import { TextBasedChannel } from "discord.js";
 
-const substitutions: Record<string, (bot: DiscordBot) => string> = {
-    ":prefix:": (bot: DiscordBot) => bot.config.prefix,
-};
+export class Formatter {
+    static substitutions: Record<string, (self: Formatter) => string> = {
+        ":prefix:": (self) => self.prefix,
+        ":adminRole": (self) => self.adminRole,
+    } as const;
 
-export function format(templateStr: string, bot: DiscordBot) {
-    for (const [ pattern, write ] of Object.entries(substitutions)) {
-        templateStr.replaceAll(pattern, write(bot));
+    constructor(private prefix: string, private adminRole: string) {}
+
+    public fmt(x: string) {
+        let formatStr = `${x}`; // Read as "cloning" templateStr to formatStr
+        for (const [pattern, write] of Object.entries(
+            Formatter.substitutions
+        )) {
+            formatStr = formatStr.replaceAll(pattern, write(this));
+        }
+        return formatStr;
     }
+}
+
+export function doTyping(
+    channel: TextBasedChannel,
+    typing: number = 0
+) {
+    channel.sendTyping();
+    setTimeout(() => {}, typing);
 }
