@@ -63,7 +63,6 @@ export declare class ArmoredMessage {
     respond(response: string): Promise<void>;
     reply(response: string): Promise<void>;
     asCommand(): Command;
-    private dispatchError;
 }
 export declare class ArmoredUser {
     username: string;

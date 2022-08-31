@@ -166,16 +166,12 @@ export class ArmoredMessage {
 		if (message.content == null || message.author == null) { throw new Error("Message doesn't have content or author") }
 		if (message.member == null) this.author = new ArmoredUser(message.author)
 		else this.author = new ArmoredUser(message.author, message.member)
-		const mentionedUser = Object.values(message.mentions.users)
-		if (message.mentions.members != null) {
-			const mentionedMembers = Object.values(message.mentions.members)
-			this.mentionedUsers = []
-			for (let i = 0; i < mentionedUser.length; i++) {
-				this.mentionedUsers.push(new ArmoredUser(mentionedUser[i], mentionedMembers[i]))
-			}
-		} else {
-			this.mentionedUsers = mentionedUser.map((x) => new ArmoredUser(x))
-		}
+		this.mentionedUsers = (Object.values(message.mentions.users) as User[])
+			.map((x) => {
+				if (message.mentions.members == null) return new ArmoredUser(x)
+				else if (message.mentions.members.get(x.id) != null) return new ArmoredUser(x, message.mentions.members.get(x.id))
+				else { return new ArmoredUser(x) }
+			})
 		this.guildId = message.guildId === null ? undefined : message.guildId
 		this.fromGuildOwner = message.guild?.ownerId === this.author.id
 		this.content = message.content
