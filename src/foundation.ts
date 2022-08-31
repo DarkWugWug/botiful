@@ -156,18 +156,25 @@ export class ArmoredMessage {
 	public author: ArmoredUser
 	public fromGuildOwner?: boolean
 	public guildId?: string
-	public mentionedUsers: ArmoredUser[]
+	public mentionedUsers: ArmoredUser[] = []
 	public content: string
 
 	private readonly message: Message | PartialMessage
 	private readonly formatter: Formatter
 
 	constructor (message: Message | PartialMessage, formatter: Formatter) {
-		if (message.content === null || message.author == null) { throw new Error("Message doesn't have content or author") }
-		this.author = new ArmoredUser(message.author, message.member)
-		this.mentionedUsers = message.mentions.users.map(
-			(x) => new ArmoredUser(x)
-		)
+		if (message.content == null || message.author == null) { throw new Error("Message doesn't have content or author") }
+		if (message.member == null) this.author = new ArmoredUser(message.author)
+		else this.author = new ArmoredUser(message.author, message.member)
+		const mentionedUser = Object.values(message.mentions.users)
+		if (message.mentions.members != null) {
+			const mentionedMembers = Object.values(message.mentions.members)
+			for (let i = 0; i < mentionedUser.length; i++) {
+				this.mentionedUsers.push(new ArmoredUser(mentionedUser[i], mentionedMembers[i]))
+			}
+		} else {
+			this.mentionedUsers.push(...mentionedUser.map((x) => new ArmoredUser(x)))
+		}
 		this.guildId = message.guildId === null ? undefined : message.guildId
 		this.fromGuildOwner = message.guild?.ownerId === this.author.id
 		this.content = message.content
