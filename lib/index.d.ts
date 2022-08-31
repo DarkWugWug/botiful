@@ -3,7 +3,7 @@ import { Logger } from 'winston';
 import { IDiscordBotConfig } from './config';
 import { IAction, IDiscordBot, IMiddleware } from './foundation';
 import { PrivateData } from './storage';
-export { IAction, ActionContext, IMiddleware, IDiscordBot, ArmoredMessage as Message, ArmoredUser as User } from './foundation';
+export { IAction, ActionContext, IMiddleware, IDiscordBot, ArmoredMessage as Message, ArmoredUser as User, Command } from './foundation';
 export { PrivateStorage as Store } from './storage';
 export { Logger } from 'winston';
 export declare class DiscordBot implements IDiscordBot {

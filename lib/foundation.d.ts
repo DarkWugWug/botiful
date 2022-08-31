@@ -65,6 +65,7 @@ export declare class ArmoredMessage {
     tryJoinAuthorInVoice(selfDeaf?: boolean, selfMute?: boolean): Promise<PlayerSubscription>;
     authorHasRole(role: string): Promise<boolean>;
     authorHasAnyRole(role: string | string[]): Promise<boolean>;
+    asCommand(): Command;
     private dispatchError;
 }
 export declare class ArmoredUser {
@@ -79,5 +80,11 @@ export declare class ArmoredUser {
 }
 export declare class ArmoredClient {
     constructor(_client: Client);
+}
+export declare class Command {
+    readonly command: string;
+    readonly args: string[];
+    constructor(stdin: string);
+    subcommand(): Command;
 }
 //# sourceMappingURL=foundation.d.ts.map

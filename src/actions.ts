@@ -41,7 +41,13 @@ export class ManCommand implements IAction<{}> {
 	public readonly man = '!man <command>'
 	public readonly admin = false
 
-	public async run (): Promise<void> {
+	private actions: ActionContext[]
+
+	constructor (actions: ActionContext[]) {
+		this.actions = actions
+	}
+
+	public async run (message: Message, store: Store<{}>, logger: Logger): Promise<void> {
 		// if(!args[0]) {
 		//     msg.channel.send("You must pass in a command to look up the manual entry for.");
 		//     return;
@@ -56,5 +62,9 @@ export class ManCommand implements IAction<{}> {
 		//     return;
 		// }
 		// msg.channel.send(format(command.man, bot));
+	}
+
+	public replaceActionList (actions: ActionContext[]): void {
+		this.actions = actions
 	}
 }

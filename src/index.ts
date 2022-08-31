@@ -6,7 +6,7 @@ import { HelpAction, ManCommand } from './actions'
 import { getCompleteConfig, IDiscordBotConfig } from './config'
 import {
 	ActionContext, ArmoredAction, ArmoredClient, ArmoredMessage, ArmoredMiddleware, IAction,
-	IDiscordBot, IMiddleware
+	IDiscordBot, IMiddleware, Command
 } from './foundation'
 import { initLogger } from './logger'
 import { AdminAccessMiddleware, RbacMiddleware, UsernameAccessMiddleware } from './middleware'
@@ -19,7 +19,8 @@ export {
 	IMiddleware,
 	IDiscordBot,
 	ArmoredMessage as Message,
-	ArmoredUser as User
+	ArmoredUser as User,
+	Command
 } from './foundation'
 export { PrivateStorage as Store } from './storage'
 export { Logger } from 'winston'
@@ -133,6 +134,13 @@ export class DiscordBot implements IDiscordBot {
 				new ArmoredClient(this.client)
 			)
 		}
+		const actionContexts = Object.values(this.actions).map((x) =>
+			x.asContext()
+		)
+		for (const action of Object.values(this.actions)) {
+			if (action instanceof HelpAction) action.replaceActionList(actionContexts)
+			else if (action instanceof ManCommand) action.replaceActionList(actionContexts)
+		}
 	}
 
 	public loadMiddleware<T extends PrivateData>(
@@ -189,7 +197,7 @@ export class DiscordBot implements IDiscordBot {
 		)
 		const botifulActions = [
 			new HelpAction(actionContexts),
-			new ManCommand()
+			new ManCommand(actionContexts)
 		]
 		this.loadActions(botifulActions)
 		const actionsInit = Object.values(this.actions).map(
@@ -226,25 +234,5 @@ export class DiscordBot implements IDiscordBot {
 			if (!(await this.middleware[name].applyClient(action, message))) { return false }
 		}
 		return true
-	}
-}
-
-class Command {
-	public readonly command: string
-	public readonly args: string[]
-
-	constructor (stdin: string) {
-		const cmdRegex = /("[^"]*"|\S+)/g
-		const parsedCmd = stdin.match(cmdRegex)
-		if (parsedCmd == null) {
-			this.command = ''
-			this.args = []
-		} else {
-			const cmdArgs = (parsedCmd.map((arg) =>
-				/^".*"$/.test(arg) ? arg.substring(1, arg.length - 2) : arg
-			))
-			this.command = cmdArgs[0].substring(1)
-			this.args = cmdArgs.slice(1)
-		}
 	}
 }

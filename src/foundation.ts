@@ -247,6 +247,10 @@ export class ArmoredMessage {
 		return this.message.member.roles.cache.hasAny(...role)
 	}
 
+	public asCommand (): Command {
+		return new Command(this.content)
+	}
+
 	private async dispatchError (text: string): Promise<Error> {
 		await this.reply(text)
 		return new Error(text)
@@ -291,4 +295,28 @@ export class ArmoredUser {
 export class ArmoredClient {
 	// eslint-disable-next-line @typescript-eslint/no-useless-constructor
 	constructor (_client: Client) {}
+}
+
+export class Command {
+	public readonly command: string
+	public readonly args: string[]
+
+	constructor (stdin: string) {
+		const cmdRegex = /("[^"]*"|\S+)/g
+		const parsedCmd = stdin.match(cmdRegex)
+		if (parsedCmd == null) {
+			this.command = ''
+			this.args = []
+		} else {
+			const cmdArgs = (parsedCmd.map((arg) =>
+				/^".*"$/.test(arg) ? arg.substring(1, arg.length - 2) : arg
+			))
+			this.command = cmdArgs[0].substring(1)
+			this.args = cmdArgs.slice(1)
+		}
+	}
+
+	public subcommand (): Command {
+		return new Command(this.args.join(' '))
+	}
 }

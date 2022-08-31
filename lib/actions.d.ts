@@ -15,6 +15,9 @@ export declare class ManCommand implements IAction<{}> {
     readonly description = "Displays the manual entry for a specified command";
     readonly man = "!man <command>";
     readonly admin = false;
-    run(): Promise<void>;
+    private actions;
+    constructor(actions: ActionContext[]);
+    run(message: Message, store: Store<{}>, logger: Logger): Promise<void>;
+    replaceActionList(actions: ActionContext[]): void;
 }
 //# sourceMappingURL=actions.d.ts.map
