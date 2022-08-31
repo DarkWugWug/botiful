@@ -72,8 +72,9 @@ export declare class ArmoredUser {
     username: string;
     id: string;
     tag: string;
-    member?: GuildMember;
+    private readonly member?;
     constructor(user: User, member?: GuildMember);
+    getRoles(): string[];
     hasRole(role: string): boolean;
     giveRole(role: string): Promise<void>;
     removeRole(role: string): Promise<void>;

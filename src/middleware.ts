@@ -27,6 +27,9 @@ export class AdminAccessMiddleware implements IMiddleware<AdminAccessData> {
 			logger.warn(
 				`Admin action denied for user ${message.author.tag} involving ${action.name}. Tried ${count} times in the past 15 minutes.`
 			)
+			logger.debug(
+				`Needed a role of ${this.roleName}, but got [ ${message.author.getRoles().join(', ')} ]`
+			)
 			await message.reply('You are not allowed to use this command.')
 			return false
 		}
@@ -56,6 +59,9 @@ export class RbacMiddleware implements IMiddleware<RbacData> {
 			await data.setItem(key, count, 15 * 60 * 1000)
 			logger.warn(
 				`Role base access denied for user ${message.author.tag} involving ${action.name}. Tried ${count} times in the past 15 minutes.`
+			)
+			logger.debug(
+				`Needed any role in [ ${action.roles.join(', ')} ], but got [ ${message.author.getRoles().join(', ')} ]`
 			)
 			await message.reply('You are not allowed to use this command.')
 			return false
@@ -88,6 +94,9 @@ implements IMiddleware<UsernameAccessData> {
 			await data.setItem(key, count, 15 * 60 * 1000)
 			logger.warn(
 				`Username based access denied for user ${message.author.tag} involving ${action.name}. Tried ${count} times in the past 15 minutes.`
+			)
+			logger.debug(
+				`Permitted users [ ${action.users.join(', ')} ]`
 			)
 			await message.reply('You are not allowed to use this command.')
 			return false

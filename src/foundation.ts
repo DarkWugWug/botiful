@@ -262,13 +262,22 @@ export class ArmoredUser {
 	public id: string
 	public tag: string
 
-	public member?: GuildMember
+	private readonly member?: GuildMember
 
 	constructor (user: User, member?: GuildMember) {
 		this.username = user.username
 		this.id = user.id
 		this.tag = user.tag
 		this.member = member
+	}
+
+	public getRoles (): string[] {
+		if (this.member == null) throw new Error('User is not a member of this server')
+		const roles = []
+		for (const role of this.member.roles.cache.values()) {
+			roles.push(role.name)
+		}
+		return roles
 	}
 
 	public hasRole (role: string): boolean {
