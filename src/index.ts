@@ -56,11 +56,11 @@ export class DiscordBot implements IDiscordBot {
 	}
 
 	public listActions (): string[] {
-		return Object.keys(this.actions)
+		return Object.keys(Object.fromEntries(this.actions))
 	}
 
 	public listMiddlewares (): string[] {
-		return Object.keys(this.middleware)
+		return Object.keys(Object.fromEntries(this.middleware))
 	}
 
 	public async logout (): Promise<void> {
