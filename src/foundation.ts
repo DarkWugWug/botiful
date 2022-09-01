@@ -6,7 +6,7 @@ import { VolumeTransformer } from 'prism-media'
 import {
 	AudioPlayerPlayingState,
 	AudioPlayerStatus,
-	createAudioPlayer, createAudioResource, DiscordGatewayAdapterCreator, joinVoiceChannel, PlayerSubscription, StreamType
+	createAudioPlayer, createAudioResource, DiscordGatewayAdapterCreator, joinVoiceChannel, PlayerSubscription, StreamType, VoiceConnectionStatus
 } from '@discordjs/voice'
 
 import { PrivateData, PrivateStorage } from './storage'
@@ -262,7 +262,7 @@ export class ArmoredUser {
 			this.member.voice.channel == null ||
       this.member.voice.channelId == null
 		) throw new Error(`${this.tag} isn't in a voice channel`)
-		const memberVoice = this.member.voice // The checks above should ensure this exists
+		const memberVoice = this.member.voice
 		const player = createAudioPlayer()
 		const voiceConnection = joinVoiceChannel({
 			guildId: this.member.guild.id,
@@ -386,6 +386,7 @@ export class VoicePresence extends EventEmitter {
 		const resource = createAudioResource(stream, { inputType: format, inlineVolume: true })
 		// TODO: Make fade if already playing a resource
 		if (resource.volume == null) throw new Error('Expected resource to have volume property. Was it not created with the `inlineVolume: true` option?')
+		if (this.subscription.connection.state.status !== VoiceConnectionStatus.Ready) throw new Error('Voice connection is not ready')
 		if (this.volume != null) resource.volume.setVolumeDecibels(this.volume)
 		this.subscription.player.play(resource)
 	}
