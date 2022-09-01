@@ -58,6 +58,7 @@ export declare class ArmoredMessage {
     author: ArmoredUser;
     fromGuildOwner?: boolean;
     guildId?: string;
+    channelId: string;
     mentionedUsers: ArmoredUser[];
     content: string;
     private readonly message;

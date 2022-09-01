@@ -165,6 +165,7 @@ export class ArmoredMessage {
 	public author: ArmoredUser
 	public fromGuildOwner?: boolean
 	public guildId?: string
+	public channelId: string
 	public mentionedUsers: ArmoredUser[]
 	public content: string
 
@@ -184,7 +185,7 @@ export class ArmoredMessage {
 		this.guildId = message.guildId === null ? undefined : message.guildId
 		this.fromGuildOwner = message.guild?.ownerId === this.author.id
 		this.content = message.content
-
+		this.channelId = message.channelId
 		this.message = message
 		this.formatter = formatter
 	}
