@@ -97,6 +97,7 @@ export declare class VoicePresence extends EventEmitter {
     private readonly subscription;
     private volume?;
     constructor(subscription: PlayerSubscription);
+    isPlaying(): boolean;
     pause(): void;
     resume(): void;
     stopTransmitting(): void;

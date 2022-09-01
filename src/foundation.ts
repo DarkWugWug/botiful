@@ -334,6 +334,12 @@ export class VoicePresence extends EventEmitter {
 		this.subscription = subscription
 	}
 
+	public isPlaying (): boolean {
+		// Assume if not explicitly idle the player is doing something similar to
+		// playing audio (e.g. buffering or paused)
+		return this.subscription.player.state.status !== 'idle'
+	}
+
 	public pause (): void {
 		const withPadding = true
 		this.subscription.player.pause(withPadding)
