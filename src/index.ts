@@ -120,14 +120,15 @@ export class DiscordBot implements IDiscordBot {
 		...actionsParam: Array<IAction<T>>
 	): void {
 		for (const action of actionsParam) {
+			if (this.actions.has(action.name)) throw new Error(`Action with name ${action.name} has already been loaded. Names must be unique.`)
 			const armoredAction = new ArmoredAction(
 				action,
 				this.store,
 				this.log,
 				new ArmoredClient(this.client)
 			)
-			const actionContext = armoredAction.asContext()
 			this.actions.set(action.name, armoredAction)
+			const actionContext = armoredAction.asContext()
 			this.emitter.emit('actionLoaded', actionContext)
 		}
 	}
@@ -136,6 +137,7 @@ export class DiscordBot implements IDiscordBot {
 		...middlewareParam: Array<IMiddleware<T>>
 	): void {
 		for (const middleware of middlewareParam) {
+			if (this.actions.has(middleware.name)) throw new Error(`Middleware with name ${middleware.name} has already been loaded. Names must be unique.`)
 			this.middleware.set(
 				middleware.name,
 				new ArmoredMiddleware(
