@@ -8,6 +8,7 @@ import {
 
 import { PrivateData, PrivateStorage } from './storage'
 import { doTyping, Formatter } from './utils'
+import { EventEmitter } from 'stream'
 
 export interface IDiscordBot {
 	readonly log: Logger
@@ -248,10 +249,10 @@ export class ArmoredUser {
 		await this.member.roles.remove(actualRole)
 	}
 
-	public async tryJoinInVoice (
+	public async joinInVoice (
 		selfDeaf = true,
 		selfMute = false
-	): Promise<PlayerSubscription> {
+	): Promise<VoicePresence> {
 		if (this.member == null) throw new Error(`${this.tag} isn't a member of this server`)
 		if (
 			this.member.voice.channel == null ||
@@ -268,7 +269,7 @@ export class ArmoredUser {
 			selfDeaf,
 			selfMute
 		})
-		return new PlayerSubscription(voiceConnection, player)
+		return new VoicePresence(new PlayerSubscription(voiceConnection, player))
 	}
 
 	public isInVoiceChannel (): boolean {
@@ -315,5 +316,13 @@ export class Command {
 		)
 		this.command = cmdArgs[0].substring(1)
 		this.args = cmdArgs.slice(1)
+	}
+}
+
+export class VoicePresence extends EventEmitter {
+	private readonly subscription: PlayerSubscription
+	constructor (subscription: PlayerSubscription) {
+		super()
+		this.subscription = subscription
 	}
 }

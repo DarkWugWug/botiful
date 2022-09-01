@@ -15,14 +15,15 @@ import { PrivateData } from './storage'
 import { Formatter } from './utils'
 
 export {
-	IAction,
 	ActionContext,
-	IMiddleware,
-	IDiscordBot,
+	ArmoredClient as Client,
 	ArmoredMessage as Message,
 	ArmoredUser as User,
-	ArmoredClient as Client,
-	Command
+	Command,
+	IAction,
+	IDiscordBot,
+	IMiddleware,
+	VoicePresence
 } from './foundation'
 export { PrivateStorage as Store } from './storage'
 export { Logger } from 'winston'

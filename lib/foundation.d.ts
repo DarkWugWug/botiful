@@ -1,9 +1,11 @@
+/// <reference types="node" />
 import { Client, ColorResolvable, GuildMember, Message, PartialMessage, User } from 'discord.js';
 import { LocalStorage } from 'node-persist';
 import { Logger } from 'winston';
 import { PlayerSubscription } from '@discordjs/voice';
 import { PrivateData, PrivateStorage } from './storage';
 import { Formatter } from './utils';
+import { EventEmitter } from 'stream';
 export interface IDiscordBot {
     readonly log: Logger;
     readonly client: Client;
@@ -75,7 +77,7 @@ export declare class ArmoredUser {
     hasAnyRole(roles: string[]): boolean;
     giveRole(role: string): Promise<void>;
     removeRole(role: string): Promise<void>;
-    tryJoinInVoice(selfDeaf?: boolean, selfMute?: boolean): Promise<PlayerSubscription>;
+    joinInVoice(selfDeaf?: boolean, selfMute?: boolean): Promise<VoicePresence>;
     isInVoiceChannel(): boolean;
 }
 export declare class ArmoredClient {
@@ -88,5 +90,9 @@ export declare class Command {
     readonly command: string;
     readonly args: string[];
     constructor(stdin: string);
+}
+export declare class VoicePresence extends EventEmitter {
+    private readonly subscription;
+    constructor(subscription: PlayerSubscription);
 }
 //# sourceMappingURL=foundation.d.ts.map
