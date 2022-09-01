@@ -273,7 +273,9 @@ export class ArmoredUser {
 			selfDeaf,
 			selfMute
 		})
-		return new VoicePresence(new PlayerSubscription(voiceConnection, player))
+		const subscription = voiceConnection.subscribe(player)
+		if (subscription == null) throw new Error('When creating the voice connection, failed to subscribe to the audio player')
+		return new VoicePresence(subscription)
 	}
 
 	public isInVoiceChannel (): boolean {
