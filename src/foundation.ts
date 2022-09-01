@@ -334,6 +334,30 @@ export class VoicePresence extends EventEmitter {
 		this.subscription = subscription
 	}
 
+	/**
+	 * Final cleanup function. Can NOT use this after calling even if you call rejoin!
+	 */
+	public destroy (): void {
+		this.subscription.player.stop()
+		this.subscription.connection.destroy()
+	}
+
+	/**
+	 * Rejoins voice chat and unpauses audio.
+	 */
+	public rejoin (): void {
+		this.subscription.connection.rejoin()
+		this.subscription.player.unpause()
+	}
+
+	/**
+	 * Allows reconnect. Will pause any audio stream currently playing.
+	 */
+	public disconnect (): void {
+		this.subscription.player.pause()
+		this.subscription.connection.disconnect()
+	}
+
 	public isPlaying (): boolean {
 		// Assume if not explicitly idle the player is doing something similar to
 		// playing audio (e.g. buffering or paused)
