@@ -13,3 +13,5 @@ package-lock.json
 *.log
 .nyc_output
 .DS_Store
+
+test/.data

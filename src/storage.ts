@@ -19,8 +19,8 @@ export class PrivateStorage<T extends PrivateData> {
 		}
 	}
 
-	public async getItem<K extends keyof T & string>(key: K): Promise<T[K]> {
-		const item: T[K] = await this.store.getItem(this.toNamespace(key))
+	public async getItem<K extends keyof T & string>(key: K): Promise<T[K] | undefined> {
+		const item = await this.store.getItem(this.toNamespace(key))
 		return item
 	}
 
@@ -69,7 +69,7 @@ export class PrivateStorage<T extends PrivateData> {
      * Removes all values from this store.
      */
 	public async clear (): Promise<void> {
-		for (const key in this.keys()) {
+		for (const key of await this.keys()) {
 			await this.store.removeItem(this.toNamespace(key))
 		}
 	}
@@ -96,9 +96,9 @@ export class PrivateStorage<T extends PrivateData> {
      */
 	public async keys (): Promise<string[]> {
 		const privilegedKeys = await this.store.keys()
-		const namespaceRegExp = new RegExp(`^${this.toNamespace('')}`)
+		const namespaceRegExp = new RegExp(`${this.toNamespace('')}`)
 		const privateKeys = privilegedKeys
-			.filter((x) => x.match(namespaceRegExp))
+			.filter((x) => x.match(namespaceRegExp) != null)
 			.map((x) => x.replace(this.toNamespace(''), ''))
 		return privateKeys
 	}
