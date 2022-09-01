@@ -79,7 +79,7 @@ export declare class ArmoredUser {
     hasAnyRole(roles: string[]): boolean;
     giveRole(role: string): Promise<void>;
     removeRole(role: string): Promise<void>;
-    joinInVoice(selfDeaf?: boolean, selfMute?: boolean): VoicePresence;
+    joinInVoice(selfDeaf?: boolean, selfMute?: boolean): Promise<VoicePresence>;
     isInVoiceChannel(): boolean;
 }
 export declare class ArmoredClient {

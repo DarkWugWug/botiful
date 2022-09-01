@@ -264,10 +264,10 @@ export class ArmoredUser {
 		await this.member.roles.remove(actualRole)
 	}
 
-	public joinInVoice (
+	public async joinInVoice (
 		selfDeaf = true,
 		selfMute = false
-	): VoicePresence {
+	): Promise<VoicePresence> {
 		if (this.member == null) throw new Error(`${this.tag} isn't a member of this server`)
 		if (
 			this.member.voice.channel == null ||
@@ -283,7 +283,7 @@ export class ArmoredUser {
 				this.member.guild.voiceAdapterCreator as DiscordGatewayAdapterCreator,
 			selfDeaf,
 			selfMute
-		}).on('error', (err) => console.error(`Failed to join user! ${err.message}`))
+		})
 		const subscription = voiceConnection.subscribe(player)
 		if (subscription == null) throw new Error('When creating the voice connection, failed to subscribe to the audio player')
 		return new VoicePresence(subscription)
