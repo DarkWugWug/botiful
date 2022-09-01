@@ -93,9 +93,27 @@ export declare class Command {
     readonly args: string[];
     constructor(stdin: string);
 }
-export declare class VoicePresence extends EventEmitter {
+export interface VoicePresenceEvent {
+    connectionError: (event: Error) => void;
+    connectionStandby: () => void;
+    connectionJoining: () => void;
+    connectionReady: () => void;
+    connectionDestroyed: () => void;
+    playerError: (streamName: string) => void;
+    playerIdle: (streamName: string) => void;
+    playerBuffering: (streamName: string) => void;
+    playerStreaming: (streamName: string) => void;
+    playerPaused: (streamName: string) => void;
+}
+export interface IVoicePresence extends EventEmitter {
+    on: <U extends keyof VoicePresenceEvent>(event: U, listener: VoicePresenceEvent[U]) => this;
+    off: <U extends keyof VoicePresenceEvent>(event: U, listener: VoicePresenceEvent[U]) => this;
+    emit: <U extends keyof VoicePresenceEvent>(event: U, ...args: Parameters<VoicePresenceEvent[U]>) => boolean;
+}
+export declare class VoicePresence extends EventEmitter implements IVoicePresence {
     private readonly subscription;
     private volume?;
+    private streamName?;
     constructor(subscription: PlayerSubscription);
     destroy(): void;
     rejoin(): void;
@@ -104,7 +122,7 @@ export declare class VoicePresence extends EventEmitter {
     pause(): void;
     resume(): void;
     stopTransmitting(): void;
-    startTransmitting(stream: string | Readable, format?: StreamType): void;
+    startTransmitting(stream: string | Readable, streamName?: string, format?: StreamType): void;
     getVolume(): number;
     setVolume(db: number): void;
     private getResourceVolumeTransformer;

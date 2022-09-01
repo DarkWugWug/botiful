@@ -1,14 +1,25 @@
-import { Client, ColorResolvable, GuildMember, Message, PartialMessage, User } from 'discord.js'
+import {
+	Client,
+	ColorResolvable,
+	GuildMember,
+	Message,
+	PartialMessage,
+	User
+} from 'discord.js'
 import { LocalStorage } from 'node-persist'
 import { Logger } from 'winston'
 import { VolumeTransformer } from 'prism-media'
-
 import {
 	AudioPlayerPlayingState,
 	AudioPlayerStatus,
-	createAudioPlayer, createAudioResource, DiscordGatewayAdapterCreator, joinVoiceChannel, PlayerSubscription, StreamType, VoiceConnectionStatus
+	createAudioPlayer,
+	createAudioResource,
+	DiscordGatewayAdapterCreator,
+	joinVoiceChannel,
+	PlayerSubscription,
+	StreamType,
+	VoiceConnectionStatus
 } from '@discordjs/voice'
-
 import { PrivateData, PrivateStorage } from './storage'
 import { doTyping, Formatter } from './utils'
 import { EventEmitter, Readable } from 'stream'
@@ -325,15 +336,100 @@ export class Command {
 	}
 }
 
-export class VoicePresence extends EventEmitter {
+export interface VoicePresenceEvent {
+	/**
+	 * Emitted when the Discord voice connection has an error.
+	 */
+	connectionError: (event: Error) => void
+	/**
+	 * Emitted when the Discord voice connection is disconnected (but still able
+	 * to be used with .rejoin()).
+	 */
+	connectionStandby: () => void
+	/**
+	 * Emitted when the Discord voice connection is establishing a connection.
+	 */
+	connectionJoining: () => void
+	/**
+	 * Emitted when the Discord voice connection is active and healthy.
+	 */
+	connectionReady: () => void
+	/**
+	 * Emitted when the Discord voice connection has been destroyed and untracked,
+	 * it cannot be reused.
+	 */
+	connectionDestroyed: () => void
+	/**
+	 * Emitted when the audio resource being played has an error.
+	 */
+	playerError: (streamName: string) => void
+	/**
+	 * Emitted when the audio player has no resource to play.
+	 * This is the starting state.
+	 */
+	playerIdle: (streamName: string) => void
+	/**
+	 * Emitted when the audio player is waiting for a resource to become readable.
+	 */
+	playerBuffering: (streamName: string) => void
+	/**
+	 * Emitted when the audio player is actively playing an AudioResource. When playback ends,
+	 * it will enter the Idle state.
+	 */
+	playerStreaming: (streamName: string) => void
+	/**
+	 * Emitted when the audio player has either been explicitly paused by the user,
+	 * or done automatically by the audio player itself.
+	 */
+	playerPaused: (streamName: string) => void
+}
+
+// Pattern: https://www.derpturkey.com/typescript-and-node-js-eventemitter/
+export interface IVoicePresence extends EventEmitter {
+	// matches EventEmitter.on
+	on: <U extends keyof VoicePresenceEvent>(event: U, listener: VoicePresenceEvent[U]) => this
+
+	// matches EventEmitter.off
+	off: <U extends keyof VoicePresenceEvent>(event: U, listener: VoicePresenceEvent[U]) => this
+
+	// matches EventEmitter.emit
+	emit: <U extends keyof VoicePresenceEvent>(
+		event: U,
+		...args: Parameters<VoicePresenceEvent[U]>
+	) => boolean
+}
+
+export class VoicePresence extends EventEmitter implements IVoicePresence {
 	private readonly subscription: PlayerSubscription
 	/**
 	 * Volume in decibels
 	 */
 	private volume?: number
+	private streamName?: string
 	constructor (subscription: PlayerSubscription) {
 		super()
 		this.subscription = subscription
+		const voice = this.subscription.connection
+		voice.on('error', (err: Error) => this.emit('error', err))
+		voice.on('stateChange', (_oldState, newState) => {
+			switch (newState.status) {
+				case VoiceConnectionStatus.Connecting: this.emit('connectionJoining'); break
+				case VoiceConnectionStatus.Disconnected: this.emit('connectionStandby'); break
+				case VoiceConnectionStatus.Ready: this.emit('connectionReady'); break
+				case VoiceConnectionStatus.Destroyed: this.emit('connectionDestroyed'); break
+			}
+		})
+		const player = this.subscription.player
+		player.on('error', () => this.emit('playerError', this.streamName))
+		player.on('stateChange', (_oldState, newState) => {
+			switch (newState.status) {
+				case AudioPlayerStatus.Idle: this.emit('playerIdle', this.streamName); break
+				case AudioPlayerStatus.Buffering: this.emit('playerBuffering', this.streamName); break
+				case AudioPlayerStatus.Playing: this.emit('playerStreaming', this.streamName); break
+				case AudioPlayerStatus.AutoPaused:
+				case AudioPlayerStatus.Paused: this.emit('playerPaused', this.streamName); break
+			}
+		})
 	}
 
 	/**
@@ -376,6 +472,7 @@ export class VoicePresence extends EventEmitter {
 	}
 
 	public stopTransmitting (): void {
+		this.streamName = undefined
 		this.subscription.player.stop()
 		// TODO: test to see if this would do anything
 		// this.subscription.connection.setSpeaking(false)
@@ -383,8 +480,10 @@ export class VoicePresence extends EventEmitter {
 
 	public startTransmitting (
 		stream: string | Readable,
+		streamName?: string,
 		format: StreamType = StreamType.WebmOpus
 	): void {
+		this.streamName = streamName
 		const resource = createAudioResource(stream, { inputType: format, inlineVolume: true })
 		// TODO: Make fade if already playing a resource
 		if (resource.volume == null) throw new Error('Expected resource to have volume property. Was it not created with the `inlineVolume: true` option?')
