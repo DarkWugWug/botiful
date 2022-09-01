@@ -1,14 +1,17 @@
 import { Client, ColorResolvable, GuildMember, Message, PartialMessage, User } from 'discord.js'
 import { LocalStorage } from 'node-persist'
 import { Logger } from 'winston'
+import { VolumeTransformer } from 'prism-media'
 
 import {
-	createAudioPlayer, DiscordGatewayAdapterCreator, joinVoiceChannel, PlayerSubscription
+	AudioPlayerPlayingState,
+	AudioPlayerStatus,
+	createAudioPlayer, createAudioResource, DiscordGatewayAdapterCreator, joinVoiceChannel, PlayerSubscription, StreamType
 } from '@discordjs/voice'
 
 import { PrivateData, PrivateStorage } from './storage'
 import { doTyping, Formatter } from './utils'
-import { EventEmitter } from 'stream'
+import { EventEmitter, Readable } from 'stream'
 
 export interface IDiscordBot {
 	readonly log: Logger
@@ -321,8 +324,77 @@ export class Command {
 
 export class VoicePresence extends EventEmitter {
 	private readonly subscription: PlayerSubscription
+	/**
+	 * Volume in decibels
+	 */
+	private volume?: number
 	constructor (subscription: PlayerSubscription) {
 		super()
 		this.subscription = subscription
+	}
+
+	public pause (): void {
+		const withPadding = true
+		this.subscription.player.pause(withPadding)
+	}
+
+	public resume (): void {
+		this.subscription.player.unpause()
+	}
+
+	public stopTransmitting (): void {
+		this.subscription.player.stop()
+		// TODO: test to see if this would do anything
+		// this.subscription.connection.setSpeaking(false)
+	}
+
+	public startTransmitting (
+		stream: string | Readable,
+		format: StreamType = StreamType.WebmOpus
+	): void {
+		const resource = createAudioResource(stream, { inputType: format, inlineVolume: true })
+		// TODO: Make fade if already playing a resource
+		if (resource.volume == null) throw new Error('Expected resource to have volume property. Was it not created with the `inlineVolume: true` option?')
+		if (this.volume != null) resource.volume.setVolumeDecibels(this.volume)
+		this.subscription.player.play(resource)
+	}
+
+	/**
+	 * If there's a volume set for this VoicePresence it will return that as all
+	 * resources should be transmitting at that volume level. Otherwise, it will
+	 * return the value of the currently playing track.
+	 * Errors: If there isn't a volume set and there isn't anything playing. What
+	 * did you want?
+	 * @returns Volume in decibels
+	 */
+	public getVolume (): number {
+		if (this.volume != null) return this.volume
+		if (this.subscription.player.state.status === 'playing') {
+			return this.getResourceVolumeTransformer().volumeDecibels
+		}
+		throw new Error("Couldn't find volume for VoicePresence and nothing was playing. Only call if set or playing something!")
+	}
+
+	/**
+	 * Sets the volume for this VoicePresence
+	 * @param db Volume level in decibels
+	 */
+	public setVolume (db: number): void {
+		if (db < 0 || db > 1) throw new Error(`Invalid volume setting: ${db}. Must be a number from 0.0 to 1.0`)
+		const state = this.subscription.player.state
+		this.volume = db
+		if ((state.status as AudioPlayerStatus) === 'playing') {
+			this.setResourceVolume(db)
+		}
+	}
+
+	private getResourceVolumeTransformer (): VolumeTransformer {
+		const resourceVolume = (this.subscription.player.state as AudioPlayerPlayingState).resource.volume
+		if (resourceVolume == null) throw new Error("This audio resource doesn't have a volume option and setVolume was called. Was it not created with the `inlineVolume: true` option?")
+		return resourceVolume
+	}
+
+	private setResourceVolume (db: number): void {
+		this.getResourceVolumeTransformer().setVolumeDecibels(db)
 	}
 }

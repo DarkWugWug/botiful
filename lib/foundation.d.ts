@@ -1,11 +1,12 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import { Client, ColorResolvable, GuildMember, Message, PartialMessage, User } from 'discord.js';
 import { LocalStorage } from 'node-persist';
 import { Logger } from 'winston';
-import { PlayerSubscription } from '@discordjs/voice';
+import { PlayerSubscription, StreamType } from '@discordjs/voice';
 import { PrivateData, PrivateStorage } from './storage';
 import { Formatter } from './utils';
-import { EventEmitter } from 'stream';
+import { EventEmitter, Readable } from 'stream';
 export interface IDiscordBot {
     readonly log: Logger;
     readonly client: Client;
@@ -93,6 +94,15 @@ export declare class Command {
 }
 export declare class VoicePresence extends EventEmitter {
     private readonly subscription;
+    private volume?;
     constructor(subscription: PlayerSubscription);
+    pause(): void;
+    resume(): void;
+    stopTransmitting(): void;
+    startTransmitting(stream: string | Readable, format?: StreamType): void;
+    getVolume(): number;
+    setVolume(db: number): void;
+    private getResourceVolumeTransformer;
+    private setResourceVolume;
 }
 //# sourceMappingURL=foundation.d.ts.map
