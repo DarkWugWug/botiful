@@ -388,7 +388,6 @@ export class VoicePresence extends EventEmitter {
 		const resource = createAudioResource(stream, { inputType: format, inlineVolume: true })
 		// TODO: Make fade if already playing a resource
 		if (resource.volume == null) throw new Error('Expected resource to have volume property. Was it not created with the `inlineVolume: true` option?')
-		if (this.subscription.connection.state.status !== VoiceConnectionStatus.Ready) throw new Error('Voice connection is not ready')
 		if (this.volume != null) resource.volume.setVolumeDecibels(this.volume)
 		this.subscription.player.play(resource)
 	}
