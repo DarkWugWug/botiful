@@ -264,10 +264,10 @@ export class ArmoredUser {
 		await this.member.roles.remove(actualRole)
 	}
 
-	public async joinInVoice (
+	public joinInVoice (
 		selfDeaf = true,
 		selfMute = false
-	): Promise<VoicePresence> {
+	): VoicePresence {
 		if (this.member == null) throw new Error(`${this.tag} isn't a member of this server`)
 		if (
 			this.member.voice.channel == null ||
@@ -284,6 +284,8 @@ export class ArmoredUser {
 			selfDeaf,
 			selfMute
 		})
+		// TODO: Remove this log
+		console.log(JSON.stringify(voiceConnection.state))
 		const subscription = voiceConnection.subscribe(player)
 		if (subscription == null) throw new Error('When creating the voice connection, failed to subscribe to the audio player')
 		return new VoicePresence(subscription)
