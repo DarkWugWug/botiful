@@ -94,23 +94,24 @@ export declare class Command {
     constructor(stdin: string);
 }
 export interface VoicePresenceEvent {
-    connectionError: (event: Error) => void;
-    connectionStandby: () => void;
-    connectionJoining: () => void;
-    connectionReady: () => void;
-    connectionDestroyed: () => void;
-    playerError: (streamName: string) => void;
-    playerIdle: (streamName: string) => void;
-    playerBuffering: (streamName: string) => void;
-    playerStreaming: (streamName: string) => void;
-    playerPaused: (streamName: string) => void;
+    connectionError: (event: Error, streamName: string | undefined) => void;
+    connectionSignalling: (streamName: string | undefined) => void;
+    connectionStandby: (streamName: string | undefined) => void;
+    connectionJoining: (streamName: string | undefined) => void;
+    connectionReady: (streamName: string | undefined) => void;
+    connectionDestroyed: (streamName: string | undefined) => void;
+    playerError: (streamName: string | undefined) => void;
+    playerIdle: (streamName: string | undefined) => void;
+    playerBuffering: (streamName: string | undefined) => void;
+    playerStreaming: (streamName: string | undefined) => void;
+    playerPaused: (streamName: string | undefined) => void;
 }
-export interface IVoicePresence extends EventEmitter {
+export interface VoicePresence extends EventEmitter {
     on: <U extends keyof VoicePresenceEvent>(event: U, listener: VoicePresenceEvent[U]) => this;
     off: <U extends keyof VoicePresenceEvent>(event: U, listener: VoicePresenceEvent[U]) => this;
     emit: <U extends keyof VoicePresenceEvent>(event: U, ...args: Parameters<VoicePresenceEvent[U]>) => boolean;
 }
-export declare class VoicePresence extends EventEmitter implements IVoicePresence {
+export declare class VoicePresence extends EventEmitter {
     private readonly subscription;
     private volume?;
     private streamName?;

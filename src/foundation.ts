@@ -340,52 +340,54 @@ export interface VoicePresenceEvent {
 	/**
 	 * Emitted when the Discord voice connection has an error.
 	 */
-	connectionError: (event: Error) => void
+	connectionError: (event: Error, streamName: string | undefined) => void
+
+	connectionSignalling: (streamName: string | undefined) => void
 	/**
 	 * Emitted when the Discord voice connection is disconnected (but still able
 	 * to be used with .rejoin()).
 	 */
-	connectionStandby: () => void
+	connectionStandby: (streamName: string | undefined) => void
 	/**
 	 * Emitted when the Discord voice connection is establishing a connection.
 	 */
-	connectionJoining: () => void
+	connectionJoining: (streamName: string | undefined) => void
 	/**
 	 * Emitted when the Discord voice connection is active and healthy.
 	 */
-	connectionReady: () => void
+	connectionReady: (streamName: string | undefined) => void
 	/**
 	 * Emitted when the Discord voice connection has been destroyed and untracked,
 	 * it cannot be reused.
 	 */
-	connectionDestroyed: () => void
+	connectionDestroyed: (streamName: string | undefined) => void
 	/**
 	 * Emitted when the audio resource being played has an error.
 	 */
-	playerError: (streamName: string) => void
+	playerError: (streamName: string | undefined) => void
 	/**
 	 * Emitted when the audio player has no resource to play.
 	 * This is the starting state.
 	 */
-	playerIdle: (streamName: string) => void
+	playerIdle: (streamName: string | undefined) => void
 	/**
 	 * Emitted when the audio player is waiting for a resource to become readable.
 	 */
-	playerBuffering: (streamName: string) => void
+	playerBuffering: (streamName: string | undefined) => void
 	/**
 	 * Emitted when the audio player is actively playing an AudioResource. When playback ends,
 	 * it will enter the Idle state.
 	 */
-	playerStreaming: (streamName: string) => void
+	playerStreaming: (streamName: string | undefined) => void
 	/**
 	 * Emitted when the audio player has either been explicitly paused by the user,
 	 * or done automatically by the audio player itself.
 	 */
-	playerPaused: (streamName: string) => void
+	playerPaused: (streamName: string | undefined) => void
 }
 
 // Pattern: https://www.derpturkey.com/typescript-and-node-js-eventemitter/
-export interface IVoicePresence extends EventEmitter {
+export interface VoicePresence extends EventEmitter {
 	// matches EventEmitter.on
 	on: <U extends keyof VoicePresenceEvent>(event: U, listener: VoicePresenceEvent[U]) => this
 
@@ -399,7 +401,7 @@ export interface IVoicePresence extends EventEmitter {
 	) => boolean
 }
 
-export class VoicePresence extends EventEmitter implements IVoicePresence {
+export class VoicePresence extends EventEmitter {
 	private readonly subscription: PlayerSubscription
 	/**
 	 * Volume in decibels
@@ -410,13 +412,14 @@ export class VoicePresence extends EventEmitter implements IVoicePresence {
 		super()
 		this.subscription = subscription
 		const voice = this.subscription.connection
-		voice.on('error', (err: Error) => this.emit('error', err))
+		voice.on('error', (err: Error) => this.emit('connectionError', err, this.streamName))
 		voice.on('stateChange', (_oldState, newState) => {
 			switch (newState.status) {
-				case VoiceConnectionStatus.Connecting: this.emit('connectionJoining'); break
-				case VoiceConnectionStatus.Disconnected: this.emit('connectionStandby'); break
-				case VoiceConnectionStatus.Ready: this.emit('connectionReady'); break
-				case VoiceConnectionStatus.Destroyed: this.emit('connectionDestroyed'); break
+				case VoiceConnectionStatus.Signalling: this.emit('connectionSignalling', this.streamName); break
+				case VoiceConnectionStatus.Connecting: this.emit('connectionJoining', this.streamName); break
+				case VoiceConnectionStatus.Disconnected: this.emit('connectionStandby', this.streamName); break
+				case VoiceConnectionStatus.Ready: this.emit('connectionReady', this.streamName); break
+				case VoiceConnectionStatus.Destroyed: this.emit('connectionDestroyed', this.streamName); break
 			}
 		})
 		const player = this.subscription.player
