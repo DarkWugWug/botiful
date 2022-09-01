@@ -9,7 +9,7 @@ module.exports = {
 	parserOptions: {
 		ecmaVersion: 'latest',
 		sourceType: 'module',
-		project: './tsconfig.json'
+		project: ['./tsconfig.json', './tsconfig.jest.json']
 	},
 	rules: {
 		// https://github.com/typescript-eslint/typescript-eslint/issues/1824

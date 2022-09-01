@@ -74,20 +74,8 @@ export class PrivateStorage<T extends PrivateData> {
 		}
 	}
 
-	/**
-     * Gets all values stored in this store.
-     * @returns Values stored
-     */
-	public async asObject (): Promise<T> {
-		const object = (await this.keys()).reduce<Record<string, any>>(async (collect, key) => {
-			collect[key] = await this.getItem(key)
-			return collect
-		}, {})
-		return object as T
-	}
-
 	public async values (): Promise<any[]> {
-		return Object.values(await this.asObject())
+		return [...await this.store.values()]
 	}
 
 	/**
@@ -101,24 +89,6 @@ export class PrivateStorage<T extends PrivateData> {
 			.filter((x) => x.match(namespaceRegExp) != null)
 			.map((x) => x.replace(this.toNamespace(''), ''))
 		return privateKeys
-	}
-
-	/**
-     * Returns an object with only keys matching a string or RegExp.
-     * @param pattern A matching pattern
-     * @returns T with all non-matched keys removed
-     */
-	public async asObjectWithMatch<K extends keyof T & string>(
-		pattern: K | RegExp
-	): Promise<Partial<T>> {
-		const object = await this.asObject()
-		const objectWithMatch: Partial<T> = {}
-		for (const [key, value] of Object.entries(object)) {
-			if (key.match(pattern) != null) {
-				objectWithMatch[key as keyof T] = value
-			}
-		}
-		return objectWithMatch
 	}
 
 	/**
