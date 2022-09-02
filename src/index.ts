@@ -4,8 +4,14 @@ import EventEmitter from 'events'
 import persist, { LocalStorage } from 'node-persist'
 import { Logger } from 'winston'
 import {
-	ActionContext, ArmoredAction, ArmoredClient, ArmoredMessage, ArmoredMiddleware, IAction,
-	IDiscordBot, IMiddleware, Command
+	ActionContext,
+	ArmoredAction,
+	ArmoredClient,
+	ArmoredMessage,
+	ArmoredMiddleware,
+	IAction,
+	IMiddleware,
+	Command
 } from './foundation'
 import { PrivateData, PrivateStorage } from './storage'
 import { Formatter } from './utils'
@@ -20,7 +26,6 @@ export {
 	ArmoredUser as User,
 	Command,
 	IAction,
-	IDiscordBot,
 	IMiddleware
 } from './foundation'
 export { VoicePresence } from './voice'
@@ -41,7 +46,7 @@ export interface BotifulOptions {
 	dataDir?: string
 }
 
-export class DiscordBot implements IDiscordBot {
+export class DiscordBot {
 	public readonly adminRole: string = 'Botiful'
 	public readonly prefix: string = '!'
 	public readonly formatter: Formatter
