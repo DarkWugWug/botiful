@@ -1,11 +1,9 @@
-/// <reference types="node" />
 import { Client, ColorResolvable, GuildMember, Message, PartialMessage, User } from 'discord.js';
 import { LocalStorage } from 'node-persist';
 import { Logger } from 'winston';
-import { AudioPlayer, StreamType } from '@discordjs/voice';
 import { PrivateData, PrivateStorage } from './storage';
 import { Formatter } from './utils';
-import { EventEmitter, Readable } from 'stream';
+import { VoicePresence } from './voice';
 export interface IDiscordBot {
     readonly log: Logger;
     readonly client: Client;
@@ -91,41 +89,5 @@ export declare class Command {
     readonly command: string;
     readonly args: string[];
     constructor(stdin: string);
-}
-export interface VoicePresenceEvent {
-    connectionError: (event: Error, streamName: string | undefined) => void;
-    connectionSignalling: (streamName: string | undefined) => void;
-    connectionStandby: (streamName: string | undefined) => void;
-    connectionJoining: (streamName: string | undefined) => void;
-    connectionReady: (streamName: string | undefined) => void;
-    connectionDestroyed: (streamName: string | undefined) => void;
-    playerError: (streamName: string | undefined) => void;
-    playerIdle: (streamName: string | undefined) => void;
-    playerBuffering: (streamName: string | undefined) => void;
-    playerStreaming: (streamName: string | undefined) => void;
-    playerPaused: (streamName: string | undefined) => void;
-}
-export interface VoicePresence extends EventEmitter {
-    on: <U extends keyof VoicePresenceEvent>(event: U, listener: VoicePresenceEvent[U]) => this;
-    off: <U extends keyof VoicePresenceEvent>(event: U, listener: VoicePresenceEvent[U]) => this;
-    emit: <U extends keyof VoicePresenceEvent>(event: U, ...args: Parameters<VoicePresenceEvent[U]>) => boolean;
-}
-export declare class VoicePresence extends EventEmitter {
-    private readonly guildId;
-    private readonly stream;
-    private streamName?;
-    private volume?;
-    constructor(guildId: string, player: AudioPlayer);
-    rejoin(channelId?: string, selfDeaf?: boolean, selfMute?: boolean): void;
-    disconnect(final?: boolean): void;
-    isPlaying(): boolean;
-    pause(): void;
-    resume(): void;
-    stopTransmitting(): void;
-    startTransmitting(stream: string | Readable, streamName?: string, format?: StreamType): void;
-    getVolume(): number;
-    setVolume(db: number): void;
-    private getResourceVolumeTransformer;
-    private setResourceVolume;
 }
 //# sourceMappingURL=foundation.d.ts.map

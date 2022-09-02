@@ -3,7 +3,6 @@ import { Client, Message, PartialMessage } from 'discord.js'
 import EventEmitter from 'events'
 import persist, { LocalStorage } from 'node-persist'
 import { Logger } from 'winston'
-
 import { HelpAction, ManCommand } from './actions'
 import { getCompleteConfig, IDiscordBotConfig } from './config'
 import {
@@ -15,6 +14,7 @@ import { AdminAccessMiddleware, RbacMiddleware } from './middleware'
 import { PrivateData } from './storage'
 import { Formatter } from './utils'
 
+export { Logger } from 'winston'
 export {
 	ActionContext,
 	ArmoredClient as Client,
@@ -23,11 +23,10 @@ export {
 	Command,
 	IAction,
 	IDiscordBot,
-	IMiddleware,
-	VoicePresence
+	IMiddleware
 } from './foundation'
+export { VoicePresence } from './voice'
 export { PrivateStorage as Store } from './storage'
-export { Logger } from 'winston'
 
 export class DiscordBot implements IDiscordBot {
 	public readonly config: { [key: string]: any }

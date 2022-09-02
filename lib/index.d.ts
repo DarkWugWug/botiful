@@ -3,9 +3,10 @@ import { Logger } from 'winston';
 import { IDiscordBotConfig } from './config';
 import { IAction, IDiscordBot, IMiddleware } from './foundation';
 import { PrivateData } from './storage';
-export { ActionContext, ArmoredClient as Client, ArmoredMessage as Message, ArmoredUser as User, Command, IAction, IDiscordBot, IMiddleware, VoicePresence } from './foundation';
-export { PrivateStorage as Store } from './storage';
 export { Logger } from 'winston';
+export { ActionContext, ArmoredClient as Client, ArmoredMessage as Message, ArmoredUser as User, Command, IAction, IDiscordBot, IMiddleware } from './foundation';
+export { VoicePresence } from './voice';
+export { PrivateStorage as Store } from './storage';
 export declare class DiscordBot implements IDiscordBot {
     readonly config: {
         [key: string]: any;
