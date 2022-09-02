@@ -1,6 +1,5 @@
 import EventEmitter from 'events';
-import { IAction, Message, Store, ActionContext } from '..';
-import { Formatter, UsageBuilder } from '../utils';
+import { IAction, Message, Store, ActionContext, Formatter, UsageBuilder } from '..';
 export declare class HelpAction implements IAction<{}> {
     readonly name = "help";
     readonly description = "Serves you this text. Can also be given another action's name to give usage information.";

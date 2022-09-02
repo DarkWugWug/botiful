@@ -9,8 +9,8 @@ export class PrivateStorage<T extends PrivateData> {
 	}
 
 	/**
-     * Sets value from each field of this object. Will not update a preexisting
-     * value ONLY if undefined. Hence the 'gently'.
+     * Sets value from each field of this object. Will not overwrite existing
+		 * keys. Hence the 'gently'.
      * @param defaults Default values
      */
 	public async _gentlyApplyDefaults (defaults: T): Promise<void> {

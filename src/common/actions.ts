@@ -3,8 +3,7 @@ import EventEmitter from 'events'
 	* Use top-level Botiful exports as this isn't a part of the library in its
 	* purest form, per-se
 	*/
-import { IAction, Message, Store, ActionContext } from '..'
-import { Formatter, UsageBuilder } from '../utils'
+import { IAction, Message, Store, ActionContext, Formatter, UsageBuilder } from '..'
 
 export class HelpAction implements IAction<{}> {
 	public readonly name = 'help'
@@ -14,7 +13,7 @@ export class HelpAction implements IAction<{}> {
 
 	public readonly usage = new UsageBuilder(this.name)
 		.whenGiven()
-		.will('Responds with a list of every action with its description')
+		.will('Respond with a list of every action with its description')
 		.whenGiven('exampleAction')
 		.will('Respond with just the description and usage examples for `exampleAction`')
 
