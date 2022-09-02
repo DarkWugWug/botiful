@@ -14,7 +14,6 @@ import {
 	AudioPlayerStatus,
 	createAudioPlayer,
 	createAudioResource,
-	DiscordGatewayAdapterCreator,
 	joinVoiceChannel,
 	PlayerSubscription,
 	StreamType,
@@ -264,26 +263,30 @@ export class ArmoredUser {
 		await this.member.roles.remove(actualRole)
 	}
 
-	public async joinInVoice (
+	public joinInVoice (
 		selfDeaf = true,
 		selfMute = false
-	): Promise<VoicePresence> {
-		if (this.member == null) throw new Error(`${this.tag} isn't a member of this server`)
+	): VoicePresence {
+		if (
+			this.member == null
+		) throw new Error(`${this.tag} isn't a member of this server`)
 		if (
 			this.member.voice.channel == null ||
-      this.member.voice.channelId == null
+      this.member.voice.channelId == null ||
+			this.member.voice.channel.guildId == null
 		) throw new Error(`${this.tag} isn't in a voice channel`)
-		const memberVoice = this.member.voice
 		const player = createAudioPlayer()
 		const voiceConnection = joinVoiceChannel({
-			guildId: this.member.guild.id,
-			channelId: memberVoice.id,
+			guildId: this.member.voice.channel.guildId,
+			channelId: this.member.voice.channelId,
 			// https://discordjs.guide/voice/voice-connections.html#creation
 			adapterCreator:
-				this.member.guild.voiceAdapterCreator as DiscordGatewayAdapterCreator,
+				this.member.voice.channel.guild.voiceAdapterCreator,
 			selfDeaf,
 			selfMute
 		})
+		// TODO: Remove this log
+		console.log(JSON.stringify(voiceConnection.state))
 		const subscription = voiceConnection.subscribe(player)
 		if (subscription == null) throw new Error('When creating the voice connection, failed to subscribe to the audio player')
 		return new VoicePresence(subscription)

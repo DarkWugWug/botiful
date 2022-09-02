@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import EventEmitter from 'events';
 import { ActionContext, IMiddleware, Logger, Message, Store, Client } from './';
 interface AdminAccessData {

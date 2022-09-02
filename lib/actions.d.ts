@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import EventEmitter from 'events';
 import { IAction, Logger, Message, Store } from './';
 import { ActionContext } from './foundation';

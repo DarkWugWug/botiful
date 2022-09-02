@@ -1,5 +1,4 @@
 /// <reference types="node" />
-/// <reference types="node" />
 import { Client, ColorResolvable, GuildMember, Message, PartialMessage, User } from 'discord.js';
 import { LocalStorage } from 'node-persist';
 import { Logger } from 'winston';
@@ -79,7 +78,7 @@ export declare class ArmoredUser {
     hasAnyRole(roles: string[]): boolean;
     giveRole(role: string): Promise<void>;
     removeRole(role: string): Promise<void>;
-    joinInVoice(selfDeaf?: boolean, selfMute?: boolean): Promise<VoicePresence>;
+    joinInVoice(selfDeaf?: boolean, selfMute?: boolean): VoicePresence;
     isInVoiceChannel(): boolean;
 }
 export declare class ArmoredClient {
