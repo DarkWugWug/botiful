@@ -1,3 +1,4 @@
+import { getVoiceConnections } from '@discordjs/voice'
 import { Client, Message, PartialMessage } from 'discord.js'
 import EventEmitter from 'events'
 import persist, { LocalStorage } from 'node-persist'
@@ -71,6 +72,15 @@ export class DiscordBot implements IDiscordBot {
 	}
 
 	public async start (): Promise<void> {
+		process.on('SIGINT', () => {
+			getVoiceConnections().forEach((connection) => connection.disconnect())
+			this.logout()
+				.then(() => process.exit(0))
+				.catch((err) => {
+					this.log.error(err)
+					process.exit(1)
+				})
+		})
 		await this.init()
 		this.log.info('Starting Discord Bot...')
 		try {
@@ -81,7 +91,7 @@ export class DiscordBot implements IDiscordBot {
 				this.log.info('Logged in and started!')
 			}
 		} catch (err) {
-			this.log.error(`Failed to login: ${JSON.stringify(err as Error)}`)
+			this.log.error(`Failed to login: ${(err as Error).message}`)
 		}
 	}
 
