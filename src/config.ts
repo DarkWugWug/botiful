@@ -1,5 +1,4 @@
-
-export interface IDiscordBotConfig {
+export interface IBotifulConfig {
 	token: string
 	intents: number[]
 	prefix?: string
@@ -7,34 +6,16 @@ export interface IDiscordBotConfig {
 	environment?: string
 	loggerLevel?: string
 	loggerOutput?: string
-	data?: { [key: string]: any }
+	dataPath?: string
 }
-export interface IDiscordBotConfigComplete extends IDiscordBotConfig {
-	prefix: string
-	admin: string
-	environment: string
-	loggerLevel: string
-	loggerOutput: string
-	data: { [key: string]: any }
-}
-export const defaultConfig: Omit<IDiscordBotConfigComplete, 'token' | 'intents'> = {
+
+export const defaultConfig: IBotifulConfig = {
+	token: 'REPLACE_ME',
+	intents: [1, 512],
 	prefix: '!',
 	admin: 'Discord Admin',
 	environment: process.env.NODE_ENV === undefined ? 'development' : process.env.NODE_ENV,
 	loggerLevel: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
 	loggerOutput: 'console',
-	data: { }
-}
-
-function verifyConfig (config: any): void {
-	if (typeof config.token !== 'string') {
-		throw new Error(`Expected Discord token in config, but found '${config.token as string}'`)
-	}
-	if (!Array.isArray(config.intents)) {
-		throw new Error('Could not find intents for the bot to use.')
-	}
-}
-export function getCompleteConfig (config: IDiscordBotConfig): IDiscordBotConfigComplete {
-	verifyConfig(config)
-	return { ...defaultConfig, ...config }
+	dataPath: 'data'
 }

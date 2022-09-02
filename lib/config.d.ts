@@ -1,4 +1,4 @@
-export interface IDiscordBotConfig {
+export interface IBotifulConfig {
     token: string;
     intents: number[];
     prefix?: string;
@@ -6,20 +6,7 @@ export interface IDiscordBotConfig {
     environment?: string;
     loggerLevel?: string;
     loggerOutput?: string;
-    data?: {
-        [key: string]: any;
-    };
+    dataPath?: string;
 }
-export interface IDiscordBotConfigComplete extends IDiscordBotConfig {
-    prefix: string;
-    admin: string;
-    environment: string;
-    loggerLevel: string;
-    loggerOutput: string;
-    data: {
-        [key: string]: any;
-    };
-}
-export declare const defaultConfig: Omit<IDiscordBotConfigComplete, 'token' | 'intents'>;
-export declare function getCompleteConfig(config: IDiscordBotConfig): IDiscordBotConfigComplete;
+export declare const defaultConfig: IBotifulConfig;
 //# sourceMappingURL=config.d.ts.map

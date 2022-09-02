@@ -1,38 +1,37 @@
-import { Client, Message, PartialMessage } from 'discord.js';
+import { GatewayIntentsString as Intent } from 'discord.js';
 import { Logger } from 'winston';
-import { IDiscordBotConfig } from './config';
-import { IAction, IDiscordBot, IMiddleware } from './foundation';
+import { ActionContext, ArmoredClient, IAction, IDiscordBot, IMiddleware } from './foundation';
 import { PrivateData } from './storage';
+import { Formatter } from './utils';
 export { Logger } from 'winston';
 export { ActionContext, ArmoredClient as Client, ArmoredMessage as Message, ArmoredUser as User, Command, IAction, IDiscordBot, IMiddleware } from './foundation';
 export { VoicePresence } from './voice';
 export { PrivateStorage as Store } from './storage';
+export { GatewayIntentsString as Intent } from 'discord.js';
+export { Formatter, UsageBuilder } from './utils';
+export interface BotifulOptions {
+    prefix?: string;
+    dataDir?: string;
+}
 export declare class DiscordBot implements IDiscordBot {
-    readonly config: {
-        [key: string]: any;
-    };
-    readonly log: Logger;
-    readonly client: Client;
     readonly adminRole: string;
     readonly prefix: string;
+    readonly formatter: Formatter;
+    readonly client: ArmoredClient;
+    private readonly _client;
     private readonly actions;
     private readonly middleware;
     private readonly store;
-    private readonly token;
-    private readonly formatter;
     private readonly emitter;
-    constructor(options: IDiscordBotConfig);
-    listActions(): string[];
-    listMiddlewares(): string[];
-    logout(): Promise<void>;
-    start(): Promise<void>;
-    runAction(msg: Message | PartialMessage): Promise<void>;
-    loadActions<T extends PrivateData>(...actionsParam: Array<IAction<T>>): void;
-    loadMiddleware<T extends PrivateData>(...middlewareParam: Array<IMiddleware<T>>): void;
-    private initStorage;
-    private initMiddlewares;
-    private initActions;
-    private init;
-    private applyMiddleware;
+    static MakeBotiful(authToken: string, intents: Intent[], logger?: Logger, options?: BotifulOptions): Promise<DiscordBot>;
+    private constructor();
+    getActions(): ActionContext[];
+    getMiddleware(): string[];
+    registerAction<T extends PrivateData>(...actionList: Array<IAction<T>>): Promise<void>;
+    registerMiddleware<T extends PrivateData>(...middlewareList: Array<IMiddleware<T>>): Promise<void>;
+    private runAction;
+    private registerDefaultSignalHandlers;
+    private loadStorage;
+    private isAuthorized;
 }
 //# sourceMappingURL=index.d.ts.map

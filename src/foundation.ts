@@ -3,33 +3,33 @@ import {
 	ColorResolvable,
 	GuildMember,
 	Message,
+	MessageOptions,
+	MessagePayload,
 	PartialMessage,
+	ReplyMessageOptions,
 	User
 } from 'discord.js'
-import { LocalStorage } from 'node-persist'
-import { Logger } from 'winston'
 import {
 	createAudioPlayer,
 	joinVoiceChannel
 } from '@discordjs/voice'
 import { PrivateData, PrivateStorage } from './storage'
-import { doTyping, Formatter } from './utils'
+import { doTyping, Formatter, UsageBuilder } from './utils'
 import { VoicePresence } from './voice'
 
 export interface IDiscordBot {
-	readonly log: Logger
-	readonly client: Client
+	readonly client: ArmoredClient
 	readonly adminRole: string
 	readonly prefix: string
 
-	listActions: () => string[]
-	listMiddlewares: () => string[]
+	getActions: () => ActionContext[]
+	getMiddleware: () => string[]
 }
 
 export interface IAction<T extends PrivateData> {
 	readonly name: string
 	readonly description: string
-	readonly man?: string
+	readonly usage?: UsageBuilder
 	readonly defaults?: T
 
 	readonly admin: boolean
@@ -38,57 +38,49 @@ export interface IAction<T extends PrivateData> {
 
 	init?: (
 		privateData: PrivateStorage<T>,
-		logger: Logger,
 		client: ArmoredClient
-	) => void | Promise<void>
+	) => Promise<void>
+
 	run: (
 		message: ArmoredMessage,
-		privateData: PrivateStorage<T>,
-		logger: Logger
-	) => void | Promise<void>
+		privateData: PrivateStorage<T>
+	) => Promise<void>
 }
 export class ArmoredAction<T extends PrivateData> {
 	public readonly name: string
 	private readonly clientAction: IAction<T>
-	private readonly db: PrivateStorage<T>
-	private readonly logger: Logger
-	private readonly discordClient: ArmoredClient
+	private readonly store: PrivateStorage<T>
+	private readonly armoredClient: ArmoredClient
 
 	constructor (
 		clientAction: IAction<T>,
-		db: LocalStorage,
-		logger: Logger,
+		store: PrivateStorage<T>,
 		client: ArmoredClient
 	) {
 		this.name = clientAction.name
 		this.clientAction = clientAction
-		const privateStorage = new PrivateStorage<T>(
-			db,
-			`botiful:${this.name}`
-		)
-		this.db = privateStorage
-		this.logger = logger
-		this.discordClient = client
+		this.store = store
+		this.armoredClient = client
 	}
 
 	public async initializeClient (): Promise<void> {
 		if (this.clientAction.defaults != null) {
-			await this.db._gentlyApplyDefaults(this.clientAction.defaults)
+			await this.store._gentlyApplyDefaults(this.clientAction.defaults)
 		}
 		if (this.clientAction.init != null) {
-			await this.clientAction.init(this.db, this.logger, this.discordClient)
+			await this.clientAction.init(this.store, this.armoredClient)
 		}
 	}
 
 	public async runClient (message: ArmoredMessage): Promise<void> {
-		await this.clientAction.run(message, this.db, this.logger)
+		await this.clientAction.run(message, this.store)
 	}
 
 	public asContext (): ActionContext {
 		return {
 			name: this.clientAction.name,
 			description: this.clientAction.description,
-			man: this.clientAction.man,
+			usage: this.clientAction.usage,
 			admin: this.clientAction.admin,
 			roles: this.clientAction.roles,
 			users: this.clientAction.users
@@ -96,10 +88,7 @@ export class ArmoredAction<T extends PrivateData> {
 	}
 }
 
-export type ActionContext = Pick<
-IAction<any>,
-'name' | 'description' | 'man' | 'admin' | 'roles' | 'users'
->
+export type ActionContext = Pick<IAction<any>, 'name' | 'description' | 'usage' | 'admin' | 'roles' | 'users'>
 
 export interface IMiddleware<T extends PrivateData> {
 	readonly name: string
@@ -107,47 +96,38 @@ export interface IMiddleware<T extends PrivateData> {
 
 	init?: (
 		privateData: PrivateStorage<T>,
-		logger: Logger,
 		client: ArmoredClient
-	) => {}
+	) => Promise<void>
 
 	apply: (
 		context: ActionContext,
 		message: ArmoredMessage,
-		privateData: PrivateStorage<T>,
-		logger: Logger
-	) => boolean | Promise<boolean>
+		privateData: PrivateStorage<T>
+	) => Promise<boolean>
 }
 export class ArmoredMiddleware<T extends PrivateData> {
 	public readonly name: string
 	private readonly clientMiddleware: IMiddleware<T>
-	private readonly db: PrivateStorage<T>
-	private readonly logger: Logger
+	private readonly store: PrivateStorage<T>
 	private readonly discordClient: ArmoredClient
 
 	constructor (
 		clientMiddleware: IMiddleware<T>,
-		db: LocalStorage,
-		logger: Logger,
+		store: PrivateStorage<T>,
 		client: ArmoredClient
 	) {
 		this.name = clientMiddleware.name
 		this.clientMiddleware = clientMiddleware
-		const privateStorage = new PrivateStorage<T>(
-			db,
-			`botiful:${this.name}`
-		)
-		this.db = privateStorage
-		this.logger = logger
+		this.store = store
 		this.discordClient = client
 	}
 
 	public async initializeClient (): Promise<void> {
 		if (this.clientMiddleware.defaults != null) {
-			await this.db._gentlyApplyDefaults(this.clientMiddleware.defaults)
+			await this.store._gentlyApplyDefaults(this.clientMiddleware.defaults)
 		}
 		if (this.clientMiddleware.init != null) {
-			await this.clientMiddleware.init(this.db, this.logger, this.discordClient)
+			await this.clientMiddleware.init(this.store, this.discordClient)
 		}
 	}
 
@@ -158,8 +138,7 @@ export class ArmoredMiddleware<T extends PrivateData> {
 		return await this.clientMiddleware.apply(
 			action,
 			message,
-			this.db,
-			this.logger
+			this.store
 		)
 	}
 }
@@ -193,19 +172,35 @@ export class ArmoredMessage {
 		this.formatter = formatter
 	}
 
-	public async respond (response: string): Promise<void> {
+	public async respond (x: string | MessagePayload | MessageOptions): Promise<void> {
 		const channel = this.message.channel
 		await doTyping(channel, 500)
-		await channel.send(this.formatter.fmt(response))
+		await channel.send(this.formatMessage(x))
 	}
 
-	public async reply (response: string): Promise<void> {
+	public async reply (x: string | MessagePayload | ReplyMessageOptions): Promise<void> {
 		await doTyping(this.message.channel, 500)
-		await this.message.reply(this.formatter.fmt(response))
+		await this.message.reply(this.formatMessage(x))
 	}
 
 	public asCommand (): Command {
 		return new Command(this.content)
+	}
+
+	private formatMessage (message: string | MessagePayload | MessageOptions): string | MessagePayload | MessageOptions {
+		const maybeOptions = message as MessageOptions
+		if (typeof message === 'string') {
+			return this.formatter.fmt(message)
+		} else if (message instanceof MessagePayload) {
+			if (message.options.content != null) {
+				message.options.content = this.formatter.fmt(message.options.content)
+			}
+			return message
+		} else if (maybeOptions.content != null) {
+			maybeOptions.content = this.formatter.fmt(maybeOptions.content)
+			return maybeOptions
+		}
+		throw new Error('Tried to format something that wasn\'t an expected message type')
 	}
 }
 

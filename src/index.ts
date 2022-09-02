@@ -1,18 +1,16 @@
 import { getVoiceConnections } from '@discordjs/voice'
-import { Client, Message, PartialMessage } from 'discord.js'
+import { Client, Message, PartialMessage, GatewayIntentsString as Intent } from 'discord.js'
 import EventEmitter from 'events'
 import persist, { LocalStorage } from 'node-persist'
 import { Logger } from 'winston'
-import { HelpAction, ManCommand } from './actions'
-import { getCompleteConfig, IDiscordBotConfig } from './config'
 import {
 	ActionContext, ArmoredAction, ArmoredClient, ArmoredMessage, ArmoredMiddleware, IAction,
 	IDiscordBot, IMiddleware, Command
 } from './foundation'
-import { initLogger } from './logger'
-import { AdminAccessMiddleware, RbacMiddleware } from './middleware'
-import { PrivateData } from './storage'
+import { PrivateData, PrivateStorage } from './storage'
 import { Formatter } from './utils'
+import { HelpAction } from './common/actions'
+import { AdminAccessMiddleware, RbacMiddleware } from './common/middleware'
 
 export { Logger } from 'winston'
 export {
@@ -27,186 +25,81 @@ export {
 } from './foundation'
 export { VoicePresence } from './voice'
 export { PrivateStorage as Store } from './storage'
+export { GatewayIntentsString as Intent } from 'discord.js'
+export { Formatter, UsageBuilder } from './utils'
+
+const DEFAULT_DATA_DIR = './data'
+export interface BotifulOptions {
+	/**
+	 * Must only be one character long! Default is the exclamation point, '!'.
+	 */
+	prefix?: string
+	/**
+	 * Path to directory where the bot's middleware and actions will store persistent
+	 * data. Defaults to `./data`.
+	 */
+	dataDir?: string
+}
 
 export class DiscordBot implements IDiscordBot {
-	public readonly config: { [key: string]: any }
-	public readonly log: Logger
-	public readonly client: Client
-	public readonly adminRole: string
-	public readonly prefix: string
+	public readonly adminRole: string = 'Botiful'
+	public readonly prefix: string = '!'
+	public readonly formatter: Formatter
+	public readonly client: ArmoredClient
 
+	private readonly _client: Client
 	private readonly actions: Map<string, ArmoredAction<any>> = new Map()
 	private readonly middleware: Map<string, ArmoredMiddleware<any>> = new Map()
 	private readonly store: LocalStorage
-	private readonly token: string
-	private readonly formatter: Formatter
 	private readonly emitter: EventEmitter
 
-	public constructor (options: IDiscordBotConfig) {
-		const config = getCompleteConfig(options)
-		this.log = initLogger(config)
-		this.config = config.data
-		this.prefix = config.prefix
-		this.token = config.token
-		this.adminRole = config.admin
-		this.client = new Client({
-			intents: config.intents
-		})
-		this.formatter = new Formatter(this.prefix, this.adminRole, this.client)
+	public static async MakeBotiful (
+		authToken: string,
+		intents: Intent[],
+		logger?: Logger,
+		options?: BotifulOptions
+	): Promise<DiscordBot> {
+		const client = new Client({ intents })
+		try {
+			await client.login(authToken)
+			const bot = new DiscordBot(client)
+			if (options?.dataDir != null) await bot.loadStorage(options.dataDir)
+			else await bot.loadStorage(DEFAULT_DATA_DIR)
+			await bot.registerAction(...[
+				new HelpAction(bot.formatter, bot.emitter, bot.getActions())
+			])
+			await bot.registerMiddleware(...[
+				new AdminAccessMiddleware(bot.adminRole, logger),
+				new RbacMiddleware(
+					bot.emitter,
+					[...bot.actions.values()].map((x) => x.asContext()),
+					logger
+				)
+			])
+			bot.registerDefaultSignalHandlers(logger)
+			return bot
+		} catch (err) {
+			throw new Error(`Failed to login to Discord: ${(err as Error).message}`, { cause: err as Error })
+		}
+	}
+
+	private constructor (
+		client: Client,
+		prefix?: string
+	) {
+		this._client = client
+		this.client = new ArmoredClient(client)
+		if (prefix != null) {
+			if (prefix.length !== 1) {
+				throw new Error(`Expected: Botiful prefix to be 1 character long. Got ${prefix.length} characters! Given Prefix: ${prefix}`)
+			}
+			this.prefix = prefix
+		}
+		this.formatter = new Formatter(this.prefix, this.adminRole, client)
 		this.store = persist
 		this.emitter = new EventEmitter()
-	}
-
-	public listActions (): string[] {
-		return Object.keys(Object.fromEntries(this.actions))
-	}
-
-	public listMiddlewares (): string[] {
-		return Object.keys(Object.fromEntries(this.middleware))
-	}
-
-	public async logout (): Promise<void> {
-		await this.client.destroy()
-		this.log.info('Bot logged out and shutdown')
-	}
-
-	public async start (): Promise<void> {
-		process.on('SIGINT', () => {
-			getVoiceConnections().forEach((connection) => connection.disconnect())
-			this.logout()
-				.then(() => process.exit(0))
-				.catch((err) => {
-					this.log.error(err)
-					process.exit(1)
-				})
-		})
-		await this.init()
-		this.log.info('Starting Discord Bot...')
-		try {
-			await this.client.login(this.token)
-			if (this.client.user != null) {
-				this.log.info(`${this.client.user.username} has logged in and started!`)
-			} else {
-				this.log.info('Logged in and started!')
-			}
-		} catch (err) {
-			this.log.error(`Failed to login: ${(err as Error).message}`)
-		}
-	}
-
-	public async runAction (msg: Message | PartialMessage): Promise<void> {
-		if (msg.content == null || (msg.author == null)) {
-			this.log.debug(
-				'Got message without content OR author. Ignoring...'
-			)
-			return
-		}
-		if (this.client.user == null || msg.author.equals(this.client.user)) return
-		// TODO: Add Lexers as a capability to bot that would allow 'eager' running of code if certain phrases/keywords are present
-		if (!msg.content.startsWith(this.prefix)) return // It's just a general text message not meant for this bot; Do nothing
-		const command = new Command(msg.content)
-		const message = new ArmoredMessage(msg, this.formatter)
-		const action = this.actions.get(command.command)
-		if (action == null) {
-			let helpCmd = 'help'
-			for (const action of Object.values(this.actions)) {
-				if (action instanceof HelpAction) helpCmd = action.name
-			}
-			await message.reply(
-				`\`:prefix:${command.command}\` is not a command. Use \`:prefix:${helpCmd}\` to see all commands.`
-			)
-			return
-		}
-		const authorized = await this.applyMiddleware(
-			action.asContext(),
-			message
-		)
-		if (!authorized) return // For now it's best practice to let the middleware report back, though in the future this needs hardening
-		await action.runClient(message)
-	}
-
-	public loadActions<T extends PrivateData>(
-		...actionsParam: Array<IAction<T>>
-	): void {
-		for (const action of actionsParam) {
-			if (this.actions.has(action.name)) throw new Error(`Action with name ${action.name} has already been loaded. Names must be unique.`)
-			const armoredAction = new ArmoredAction(
-				action,
-				this.store,
-				this.log,
-				new ArmoredClient(this.client)
-			)
-			this.actions.set(action.name, armoredAction)
-			const actionContext = armoredAction.asContext()
-			this.emitter.emit('actionLoaded', actionContext)
-		}
-	}
-
-	public loadMiddleware<T extends PrivateData>(
-		...middlewareParam: Array<IMiddleware<T>>
-	): void {
-		for (const middleware of middlewareParam) {
-			if (this.actions.has(middleware.name)) throw new Error(`Middleware with name ${middleware.name} has already been loaded. Names must be unique.`)
-			this.middleware.set(
-				middleware.name,
-				new ArmoredMiddleware(
-					middleware,
-					this.store,
-					this.log,
-					new ArmoredClient(this.client)
-				)
-			)
-		}
-	}
-
-	private async initStorage (): Promise<void> {
-		await this.store.init({
-			dir: './data',
-			expiredInterval: 1 * 60 * 1000
-		})
-		this.log.info('Initialized data store')
-	}
-
-	private async initMiddlewares (): Promise<void> {
-		const botifulMiddleware = [
-			new AdminAccessMiddleware(this.adminRole),
-			new RbacMiddleware(this.emitter, [...this.actions.values()].map((x) => x.asContext()))
-		]
-		this.loadMiddleware(...botifulMiddleware)
-		const middlewaresWithInit = Object.values(this.middleware).map(
-			(x) => x.initializeClient
-		)
-		await Promise.all(middlewaresWithInit)
-		this.log.info(
-			`Middlewares loaded and initialized: [ ${this.listMiddlewares().join(
-				', '
-			)} ]`
-		)
-	}
-
-	private async initActions (): Promise<void> {
-		const currentActions = [...this.actions.values()].map((x) => x.asContext())
-		const botifulActions = [
-			new HelpAction(this.emitter, currentActions),
-			new ManCommand(this.emitter, currentActions)
-		]
-		this.loadActions(...botifulActions)
-		const actionsInit = Object.values(this.actions).map(
-			(x) => x.initializeClient
-		)
-		await Promise.all(actionsInit)
-		this.log.info(
-			`Actions loaded and initialized: [ ${this.listActions().join(
-				', '
-			)} ]`
-		)
-	}
-
-	private async init (): Promise<void> {
-		await this.initStorage()
-		await Promise.all([this.initMiddlewares(), this.initActions()])
-		this.client.on('messageCreate', async (msg) => await this.runAction(msg))
-		this.client.on('messageUpdate', async (oldMsg, newMsg) => {
+		this._client.on('messageCreate', async (msg) => await this.runAction(msg))
+		this._client.on('messageUpdate', async (oldMsg, newMsg) => {
 			if (
 				oldMsg.content === newMsg.content ||
 				(newMsg.embeds.length > 0 && oldMsg.embeds.length === 0)
@@ -217,7 +110,91 @@ export class DiscordBot implements IDiscordBot {
 		})
 	}
 
-	private async applyMiddleware (
+	public getActions (): ActionContext[] {
+		return [...this.actions.values()].map((x) => x.asContext())
+	}
+
+	public getMiddleware (): string[] {
+		return [...this.middleware.keys()]
+	}
+
+	public async registerAction<T extends PrivateData>(
+		...actionList: Array<IAction<T>>
+	): Promise<void> {
+		for (const action of actionList) {
+			if (this.actions.has(action.name)) throw new Error(`Action with an identical name has already been registered. Names must be unique. Given: ${action.name}`)
+			const privateStore = new PrivateStorage<T>(
+				this.store,
+				`botiful:${action.name}`
+			)
+			if (action.init != null) await action.init(privateStore, this.client)
+			const armoredAction = new ArmoredAction(action, privateStore, this.client)
+			this.actions.set(action.name, armoredAction)
+			const actionContext = armoredAction.asContext()
+			this.emitter.emit('actionLoaded', actionContext)
+		}
+	}
+
+	public async registerMiddleware<T extends PrivateData>(
+		...middlewareList: Array<IMiddleware<T>>
+	): Promise<void> {
+		for (const middleware of middlewareList) {
+			if (this.actions.has(middleware.name)) throw new Error(`Middleware the an identical name has already been registered! Names must be unique. Given: ${middleware.name}`)
+			const privateStore = new PrivateStorage<T>(
+				this.store,
+				`botiful:${middleware.name}`
+			)
+			if (middleware.init != null) await middleware.init(privateStore, this.client)
+			this.middleware.set(
+				middleware.name,
+				new ArmoredMiddleware(middleware, privateStore, this.client)
+			)
+		}
+	}
+
+	private async runAction (rawMessage: Message | PartialMessage): Promise<void> {
+		if (this._client.user == null || rawMessage.author === this._client.user) return
+		if (rawMessage.content == null) throw new Error('Failed to parse message because the CONTENT was undefined')
+		if (rawMessage.author == null) throw new Error('Failed to parse message because the AUTHOR was undefined')
+		if (!rawMessage.content.startsWith(this.prefix)) return
+		const command = new Command(rawMessage.content)
+		const message = new ArmoredMessage(rawMessage, this.formatter)
+		const action = this.actions.get(command.command)
+		if (action == null) {
+			await message.reply(
+				`\`:prefix:${command.command}\` is not a command. Use \`:prefix:man ${command.command}\` to see a how to use it or \`:prefix:help\` to see a list of all commands.`
+			)
+			return
+		}
+		if (!await this.isAuthorized(action.asContext(), message)) {
+			// TODO: message.react(🚫👮‍♀️🚫)
+			return
+		}
+		await action.runClient(message)
+	}
+
+	private registerDefaultSignalHandlers (logger?: Logger): void {
+		process.on('SIGINT', () => {
+			getVoiceConnections().forEach((connection) => connection.disconnect())
+			this._client.destroy()
+			if (logger != null) {
+				if (this._client.user == null) logger.info('Bot logged out of Discord')
+				else logger.info(`${this._client.user.username} has logged out of Discord`)
+			}
+			process.exit(0)
+		})
+		if (logger != null) {
+			this._client.on('error', (err) => {
+				logger.error(`Discord client had error: ${err.message}`)
+			})
+		}
+	}
+
+	private async loadStorage (dir: string): Promise<void> {
+		await this.store.init({ dir, expiredInterval: 1 * 60 * 1000 })
+	}
+
+	private async isAuthorized (
 		action: ActionContext,
 		message: ArmoredMessage
 	): Promise<boolean> {
