@@ -2,7 +2,7 @@
 import { Client, ColorResolvable, GuildMember, Message, PartialMessage, User } from 'discord.js';
 import { LocalStorage } from 'node-persist';
 import { Logger } from 'winston';
-import { PlayerSubscription, StreamType } from '@discordjs/voice';
+import { AudioPlayer, StreamType } from '@discordjs/voice';
 import { PrivateData, PrivateStorage } from './storage';
 import { Formatter } from './utils';
 import { EventEmitter, Readable } from 'stream';
@@ -111,13 +111,13 @@ export interface VoicePresence extends EventEmitter {
     emit: <U extends keyof VoicePresenceEvent>(event: U, ...args: Parameters<VoicePresenceEvent[U]>) => boolean;
 }
 export declare class VoicePresence extends EventEmitter {
-    private readonly subscription;
-    private volume?;
+    private readonly guildId;
+    private readonly stream;
     private streamName?;
-    constructor(subscription: PlayerSubscription);
-    destroy(): void;
-    rejoin(): void;
-    disconnect(): void;
+    private volume?;
+    constructor(guildId: string, player: AudioPlayer);
+    rejoin(channelId?: string, selfDeaf?: boolean, selfMute?: boolean): void;
+    disconnect(final?: boolean): void;
     isPlaying(): boolean;
     pause(): void;
     resume(): void;

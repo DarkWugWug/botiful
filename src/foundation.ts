@@ -10,12 +10,13 @@ import { LocalStorage } from 'node-persist'
 import { Logger } from 'winston'
 import { VolumeTransformer } from 'prism-media'
 import {
+	AudioPlayer,
 	AudioPlayerPlayingState,
 	AudioPlayerStatus,
 	createAudioPlayer,
 	createAudioResource,
+	getVoiceConnection,
 	joinVoiceChannel,
-	PlayerSubscription,
 	StreamType,
 	VoiceConnectionStatus
 } from '@discordjs/voice'
@@ -275,9 +276,10 @@ export class ArmoredUser {
       this.member.voice.channelId == null ||
 			this.member.voice.channel.guildId == null
 		) throw new Error(`${this.tag} isn't in a voice channel`)
+		const guildId = this.member.voice.channel.guildId
 		const player = createAudioPlayer()
 		const voiceConnection = joinVoiceChannel({
-			guildId: this.member.voice.channel.guildId,
+			guildId,
 			channelId: this.member.voice.channelId,
 			// https://discordjs.guide/voice/voice-connections.html#creation
 			adapterCreator:
@@ -285,11 +287,9 @@ export class ArmoredUser {
 			selfDeaf,
 			selfMute
 		})
-		// TODO: Remove this log
-		console.log(JSON.stringify(voiceConnection.state))
 		const subscription = voiceConnection.subscribe(player)
 		if (subscription == null) throw new Error('When creating the voice connection, failed to subscribe to the audio player')
-		return new VoicePresence(subscription)
+		return new VoicePresence(guildId, player)
 	}
 
 	public isInVoiceChannel (): boolean {
@@ -405,16 +405,19 @@ export interface VoicePresence extends EventEmitter {
 }
 
 export class VoicePresence extends EventEmitter {
-	private readonly subscription: PlayerSubscription
-	/**
-	 * Volume in decibels
-	 */
-	private volume?: number
+	private readonly guildId: string
+	private readonly stream: AudioPlayer
 	private streamName?: string
-	constructor (subscription: PlayerSubscription) {
+	/**
+	* Volume in decibels
+	*/
+	private volume?: number
+
+	constructor (guildId: string, player: AudioPlayer) {
 		super()
-		this.subscription = subscription
-		const voice = this.subscription.connection
+		this.guildId = guildId
+		const voice = getVoiceConnection(guildId)
+		if (voice == null) throw new Error(`Guild ${guildId} doesn't have an active voice connection! Construct @discordjs/voice.joinVoiceChannel before calling this!`)
 		voice.on('error', (err: Error) => this.emit('connectionError', err, this.streamName))
 		voice.on('stateChange', (_oldState, newState) => {
 			switch (newState.status) {
@@ -425,7 +428,7 @@ export class VoicePresence extends EventEmitter {
 				case VoiceConnectionStatus.Destroyed: this.emit('connectionDestroyed', this.streamName); break
 			}
 		})
-		const player = this.subscription.player
+		this.stream = player
 		player.on('error', () => this.emit('playerError', this.streamName))
 		player.on('stateChange', (_oldState, newState) => {
 			switch (newState.status) {
@@ -439,47 +442,59 @@ export class VoicePresence extends EventEmitter {
 	}
 
 	/**
-	 * Final cleanup function. Can NOT use this after calling even if you call rejoin!
+	 * Rejoins voice chat and unpauses audio (if any).
 	 */
-	public destroy (): void {
-		this.subscription.player.stop()
-		this.subscription.connection.destroy()
+	public rejoin (channelId?: string, selfDeaf?: boolean, selfMute?: boolean): void {
+		const voice = getVoiceConnection(this.guildId)
+		if (voice == null) throw new Error(`Guild ${this.guildId} doesn't have a voice connection to rejoin`)
+		const newJoinConfig = voice.joinConfig
+		if (channelId != null) newJoinConfig.channelId = channelId
+		if (selfDeaf != null) newJoinConfig.selfDeaf = selfDeaf
+		if (selfMute != null) newJoinConfig.selfMute = selfMute
+		voice.rejoin(newJoinConfig)
+		this.stream.unpause()
 	}
 
 	/**
-	 * Rejoins voice chat and unpauses audio.
+	 * By default, this will disconnect and destroy the bots the voice connection.
+	 * From then on the bot will be non-function. It has been destroyed and even
+	 * if you call rejoin nothing will happen. This will also stop and destroy any
+	 * audio stream currently playing.
+	 *
+	 * If called with `final = false` this will disconnect from the voice channel
+	 * but leave the underlying voice connection to discord intact: this allows
+	 * the bot to rejoin. (See: `.rejoin()`). This will will pause any audio
+	 * stream currently playing.
 	 */
-	public rejoin (): void {
-		this.subscription.connection.rejoin()
-		this.subscription.player.unpause()
-	}
-
-	/**
-	 * Allows reconnect. Will pause any audio stream currently playing.
-	 */
-	public disconnect (): void {
-		this.subscription.player.pause()
-		this.subscription.connection.disconnect()
+	public disconnect (final = true): void {
+		const voice = getVoiceConnection(this.guildId)
+		if (voice == null) throw new Error(`Guild ${this.guildId} doesn't have a voice connection to disconnect`)
+		if (final) {
+			this.stream.stop()
+			voice.destroy()
+		} else {
+			this.stream.pause()
+			voice.disconnect()
+		}
 	}
 
 	public isPlaying (): boolean {
 		// Assume if not explicitly idle the player is doing something similar to
 		// playing audio (e.g. buffering or paused)
-		return this.subscription.player.state.status !== 'idle'
+		return this.stream.state.status === 'playing'
 	}
 
 	public pause (): void {
-		const withPadding = true
-		this.subscription.player.pause(withPadding)
+		this.stream.pause()
 	}
 
 	public resume (): void {
-		this.subscription.player.unpause()
+		this.stream.unpause()
 	}
 
 	public stopTransmitting (): void {
 		this.streamName = undefined
-		this.subscription.player.stop()
+		this.stream.stop()
 		// TODO: test to see if this would do anything
 		// this.subscription.connection.setSpeaking(false)
 	}
@@ -491,10 +506,11 @@ export class VoicePresence extends EventEmitter {
 	): void {
 		this.streamName = streamName
 		const resource = createAudioResource(stream, { inputType: format, inlineVolume: true })
-		// TODO: Make fade if already playing a resource
 		if (resource.volume == null) throw new Error('Expected resource to have volume property. Was it not created with the `inlineVolume: true` option?')
-		if (this.volume != null) resource.volume.setVolumeDecibels(this.volume)
-		this.subscription.player.play(resource)
+		// TODO: Make cross fade if already playing a resource
+		if (this.volume == null) this.volume = 55
+		else resource.volume.setVolumeDecibels(this.volume)
+		this.stream.play(resource)
 	}
 
 	/**
@@ -507,7 +523,7 @@ export class VoicePresence extends EventEmitter {
 	 */
 	public getVolume (): number {
 		if (this.volume != null) return this.volume
-		if (this.subscription.player.state.status === 'playing') {
+		if (this.stream.state.status === 'playing') {
 			return this.getResourceVolumeTransformer().volumeDecibels
 		}
 		throw new Error("Couldn't find volume for VoicePresence and nothing was playing. Only call if set or playing something!")
@@ -519,7 +535,7 @@ export class VoicePresence extends EventEmitter {
 	 */
 	public setVolume (db: number): void {
 		if (db < 0 || db > 1) throw new Error(`Invalid volume setting: ${db}. Must be a number from 0.0 to 1.0`)
-		const state = this.subscription.player.state
+		const state = this.stream.state
 		this.volume = db
 		if ((state.status as AudioPlayerStatus) === 'playing') {
 			this.setResourceVolume(db)
@@ -527,7 +543,7 @@ export class VoicePresence extends EventEmitter {
 	}
 
 	private getResourceVolumeTransformer (): VolumeTransformer {
-		const resourceVolume = (this.subscription.player.state as AudioPlayerPlayingState).resource.volume
+		const resourceVolume = (this.stream.state as AudioPlayerPlayingState).resource.volume
 		if (resourceVolume == null) throw new Error("This audio resource doesn't have a volume option and setVolume was called. Was it not created with the `inlineVolume: true` option?")
 		return resourceVolume
 	}
