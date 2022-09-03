@@ -179,19 +179,17 @@ export class ArmoredMessage {
 	}
 
 	private formatMessage (message: string | MessagePayload | MessageOptions): string | MessagePayload | MessageOptions {
-		const maybeOptions = message as MessageOptions
 		if (typeof message === 'string') {
-			return this.formatter.fmt(message)
+			// Dealing with string
+			message = this.formatter.fmt(message)
 		} else if (message instanceof MessagePayload) {
-			if (message.options.content != null) {
-				message.options.content = this.formatter.fmt(message.options.content)
-			}
-			return message
-		} else if (maybeOptions.content != null) {
-			maybeOptions.content = this.formatter.fmt(maybeOptions.content)
-			return maybeOptions
+			// Dealing with MessagePayload
+			if (message.options.content != null) message.options.content = this.formatter.fmt(message.options.content)
+		} else if ('content' in message) {
+			// Dealing with MessageOptions
+			if (message.content != null) message.content = this.formatter.fmt(message.content)
 		}
-		throw new Error('Tried to format something that wasn\'t an expected message type')
+		return message
 	}
 }
 

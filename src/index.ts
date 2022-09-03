@@ -15,8 +15,7 @@ import {
 } from './foundation'
 import { PrivateData, PrivateStorage } from './storage'
 import { Formatter } from './utils'
-import { HelpAction } from './common/helpAction'
-import { AdminAccessMiddleware, RbacMiddleware } from './common/middleware'
+import { HelpAction, AdminAccessMiddleware, RbacMiddleware } from './common'
 
 export { GatewayIntentsString as Intent } from 'discord.js'
 export { Logger } from 'winston'
