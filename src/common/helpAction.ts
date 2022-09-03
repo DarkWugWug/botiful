@@ -1,9 +1,8 @@
-import EventEmitter from 'events'
 /**
 	* Use top-level Botiful exports as this isn't a part of the library in its
 	* purest form, per-se
 	*/
-import { IAction, Message, Store, ActionContext, Formatter, UsageBuilder } from '..'
+import { IAction, Message, Store, ActionContext, Formatter, UsageBuilder, DiscordBotEventEmitter } from '..'
 
 export class HelpAction implements IAction<{}> {
 	public readonly name = 'help'
@@ -21,10 +20,10 @@ export class HelpAction implements IAction<{}> {
 	private readonly formatter: Formatter
 	private readonly actions: ActionContext[] = []
 
-	constructor (formatter: Formatter, emitter: EventEmitter, current?: ActionContext[]) {
+	constructor (formatter: Formatter, emitter: DiscordBotEventEmitter, current?: ActionContext[]) {
 		if (current != null) this.actions.push(...current)
 		this.formatter = formatter
-		emitter.on('actionLoaded', (x: ActionContext) => {
+		emitter.on('register:action', (x: ActionContext) => {
 			this.actions.push(x)
 		})
 	}

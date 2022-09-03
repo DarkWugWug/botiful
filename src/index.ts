@@ -15,9 +15,10 @@ import {
 } from './foundation'
 import { PrivateData, PrivateStorage } from './storage'
 import { Formatter } from './utils'
-import { HelpAction } from './common/actions'
+import { HelpAction } from './common/helpAction'
 import { AdminAccessMiddleware, RbacMiddleware } from './common/middleware'
 
+export { GatewayIntentsString as Intent } from 'discord.js'
 export { Logger } from 'winston'
 export {
 	ActionContext,
@@ -28,12 +29,10 @@ export {
 	IAction,
 	IMiddleware
 } from './foundation'
-export { VoicePresence } from './voice'
 export { PrivateStorage as Store } from './storage'
-export { GatewayIntentsString as Intent } from 'discord.js'
 export { Formatter, UsageBuilder } from './utils'
+export { VoicePresence } from './voice'
 
-const DEFAULT_DATA_DIR = './data'
 export interface BotifulOptions {
 	/**
 	 * Must only be one character long! Default is the exclamation point, '!'.
@@ -44,19 +43,44 @@ export interface BotifulOptions {
 	 * data. Defaults to `./data`.
 	 */
 	dataDir?: string
+	/**
+	 * Name of the role to use when protecting admin actions. The author of the
+	 * message must have this role to use any admin action.
+	 */
+	adminRole?: string
+}
+
+export interface DiscordBotEvent {
+	'register:action': (ctx: ActionContext) => void
+	'register:middleware': (name: string) => void
+}
+// Pattern: https://www.derpturkey.com/typescript-and-node-js-eventemitter/
+export interface DiscordBotEventEmitter extends EventEmitter {
+	// matches EventEmitter.on
+	on: <U extends keyof DiscordBotEvent>(event: U, listener: DiscordBotEvent[U]) => this
+
+	// matches EventEmitter.off
+	off: <U extends keyof DiscordBotEvent>(event: U, listener: DiscordBotEvent[U]) => this
+
+	// matches EventEmitter.emit
+	emit: <U extends keyof DiscordBotEvent>(
+		event: U,
+		...args: Parameters<DiscordBotEvent[U]>
+	) => boolean
 }
 
 export class DiscordBot {
-	public readonly adminRole: string = 'Botiful'
-	public readonly prefix: string = '!'
 	public readonly formatter: Formatter
 	public readonly client: ArmoredClient
+	public readonly emitter: DiscordBotEventEmitter // TODO: Determine if have a separate emitter object vs the class being one is an anti-pattern
+	public readonly adminRole: string = 'Botiful'
+	public readonly prefix: string = '!'
+	public readonly dataDir: string = './data'
 
 	private readonly _client: Client
 	private readonly actions: Map<string, ArmoredAction<any>> = new Map()
 	private readonly middleware: Map<string, ArmoredMiddleware<any>> = new Map()
 	private readonly store: LocalStorage
-	private readonly emitter: EventEmitter
 
 	public static async MakeBotiful (
 		authToken: string,
@@ -67,9 +91,8 @@ export class DiscordBot {
 		const client = new Client({ intents })
 		try {
 			await client.login(authToken)
-			const bot = new DiscordBot(client)
-			if (options?.dataDir != null) await bot.loadStorage(options.dataDir)
-			else await bot.loadStorage(DEFAULT_DATA_DIR)
+			const bot = new DiscordBot(client, options?.prefix, options?.adminRole, options?.dataDir)
+			await bot.loadStorage()
 			await bot.registerAction(...[
 				new HelpAction(bot.formatter, bot.emitter, bot.getActions())
 			])
@@ -90,7 +113,9 @@ export class DiscordBot {
 
 	private constructor (
 		client: Client,
-		prefix?: string
+		prefix?: string,
+		adminRole?: string,
+		dataDir?: string
 	) {
 		this._client = client
 		this.client = new ArmoredClient(client)
@@ -100,6 +125,8 @@ export class DiscordBot {
 			}
 			this.prefix = prefix
 		}
+		if (adminRole != null) this.adminRole = adminRole
+		if (dataDir != null) this.dataDir = dataDir
 		this.formatter = new Formatter(this.prefix, this.adminRole, client)
 		this.store = persist
 		this.emitter = new EventEmitter()
@@ -136,7 +163,7 @@ export class DiscordBot {
 			const armoredAction = new ArmoredAction(action, privateStore, this.client)
 			this.actions.set(action.name, armoredAction)
 			const actionContext = armoredAction.asContext()
-			this.emitter.emit('actionLoaded', actionContext)
+			this.emitter.emit('register:action', actionContext)
 		}
 	}
 
@@ -154,6 +181,7 @@ export class DiscordBot {
 				middleware.name,
 				new ArmoredMiddleware(middleware, privateStore, this.client)
 			)
+			this.emitter.emit('register:middleware', middleware.name)
 		}
 	}
 
@@ -195,8 +223,8 @@ export class DiscordBot {
 		}
 	}
 
-	private async loadStorage (dir: string): Promise<void> {
-		await this.store.init({ dir, expiredInterval: 1 * 60 * 1000 })
+	private async loadStorage (): Promise<void> {
+		await this.store.init({ dir: this.dataDir, expiredInterval: 1 * 60 * 1000 })
 	}
 
 	private async isAuthorized (

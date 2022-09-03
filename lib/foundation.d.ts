@@ -2,13 +2,6 @@ import { Client, ColorResolvable, GuildMember, Message, MessageOptions, MessageP
 import { PrivateData, PrivateStorage } from './storage';
 import { Formatter, UsageBuilder } from './utils';
 import { VoicePresence } from './voice';
-export interface IDiscordBot {
-    readonly client: ArmoredClient;
-    readonly adminRole: string;
-    readonly prefix: string;
-    getActions: () => ActionContext[];
-    getMiddleware: () => string[];
-}
 export interface IAction<T extends PrivateData> {
     readonly name: string;
     readonly description: string;
