@@ -1,10 +1,10 @@
 import { VolumeTransformer } from 'prism-media'
 import {
-	AudioPlayer,
 	AudioPlayerPlayingState,
 	AudioPlayerStatus,
 	createAudioResource,
 	getVoiceConnection,
+	PlayerSubscription,
 	StreamType,
 	VoiceConnectionStatus
 } from '@discordjs/voice'
@@ -77,14 +77,14 @@ export interface VoicePresence extends EventEmitter {
 
 export class VoicePresence extends EventEmitter {
 	private readonly guildId: string
-	private readonly stream: AudioPlayer
+	private readonly subscription: PlayerSubscription
 	private streamName?: string
 	/**
 	* Volume in decibels
 	*/
 	private volume?: number
 
-	constructor (guildId: string, player: AudioPlayer) {
+	constructor (guildId: string, subscription: PlayerSubscription) {
 		super()
 		this.guildId = guildId
 		const voice = getVoiceConnection(guildId)
@@ -99,9 +99,9 @@ export class VoicePresence extends EventEmitter {
 				case VoiceConnectionStatus.Destroyed: this.emit('connectionDestroyed', this.streamName); break
 			}
 		})
-		this.stream = player
-		player.on('error', () => this.emit('playerError', this.streamName))
-		player.on('stateChange', (_oldState, newState) => {
+		this.subscription = subscription
+		this.subscription.player.on('error', () => this.emit('playerError', this.streamName))
+		this.subscription.player.on('stateChange', (_oldState, newState) => {
 			switch (newState.status) {
 				case AudioPlayerStatus.Idle: this.emit('playerIdle', this.streamName); break
 				case AudioPlayerStatus.Buffering: this.emit('playerBuffering', this.streamName); break
@@ -123,7 +123,7 @@ export class VoicePresence extends EventEmitter {
 		if (selfDeaf != null) newJoinConfig.selfDeaf = selfDeaf
 		if (selfMute != null) newJoinConfig.selfMute = selfMute
 		voice.rejoin(newJoinConfig)
-		this.stream.unpause()
+		this.subscription.player.unpause()
 	}
 
 	/**
@@ -152,18 +152,18 @@ export class VoicePresence extends EventEmitter {
 	public isPlaying (): boolean {
 		const voice = getVoiceConnection(this.guildId)
 		if (voice == null) throw new Error(`Couldn't determine if this is playing because there is no voice connection for guild ${this.guildId}`)
-		return this.stream.state.status === 'playing' && voice.state.status === 'ready'
+		return this.subscription.player.state.status === 'playing' && voice.state.status === 'ready'
 	}
 
 	public pause (): void {
-		this.stream.pause()
+		this.subscription.player.pause()
 		const voice = getVoiceConnection(this.guildId)
 		if (voice == null) throw new Error(`Cannot pause streaming because there is no voice connection for guild ${this.guildId}`)
 		voice.setSpeaking(false)
 	}
 
 	public resume (): void {
-		this.stream.unpause()
+		this.subscription.player.unpause()
 		const voice = getVoiceConnection(this.guildId)
 		if (voice == null) throw new Error(`Cannot resume streaming because there is no voice connection for guild ${this.guildId}`)
 		voice.setSpeaking(true)
@@ -171,7 +171,7 @@ export class VoicePresence extends EventEmitter {
 
 	public stopTransmitting (): void {
 		this.streamName = undefined
-		this.stream.stop()
+		this.subscription.player.stop()
 		const voice = getVoiceConnection(this.guildId)
 		if (voice == null) throw new Error(`Cannot stop streaming because there is no voice connection for guild ${this.guildId}`)
 		voice.setSpeaking(false)
@@ -191,7 +191,7 @@ export class VoicePresence extends EventEmitter {
 		const voice = getVoiceConnection(this.guildId)
 		if (voice == null) throw new Error(`Cannot start streaming because there is no voice connection for guild ${this.guildId}`)
 		voice.setSpeaking(true)
-		this.stream.play(resource)
+		this.subscription.player.play(resource)
 	}
 
 	/**
@@ -204,7 +204,7 @@ export class VoicePresence extends EventEmitter {
 	 */
 	public getVolume (): number {
 		if (this.volume != null) return this.volume
-		if (this.stream.state.status === 'playing') {
+		if (this.subscription.player.state.status === 'playing') {
 			return this.getResourceVolumeTransformer().volumeDecibels
 		}
 		throw new Error("Couldn't find volume for VoicePresence and nothing was playing. Only call if set or playing something!")
@@ -216,7 +216,7 @@ export class VoicePresence extends EventEmitter {
 	 */
 	public setVolume (db: number): void {
 		if (db < 0 || db > 1) throw new Error(`Invalid volume setting: ${db}. Must be a number from 0.0 to 1.0`)
-		const state = this.stream.state
+		const state = this.subscription.player.state
 		this.volume = db
 		if ((state.status as AudioPlayerStatus) === 'playing') {
 			this.setResourceVolume(db)
@@ -224,7 +224,7 @@ export class VoicePresence extends EventEmitter {
 	}
 
 	private getResourceVolumeTransformer (): VolumeTransformer {
-		const resourceVolume = (this.stream.state as AudioPlayerPlayingState).resource.volume
+		const resourceVolume = (this.subscription.player.state as AudioPlayerPlayingState).resource.volume
 		if (resourceVolume == null) throw new Error("This audio resource doesn't have a volume option and setVolume was called. Was it not created with the `inlineVolume: true` option?")
 		return resourceVolume
 	}

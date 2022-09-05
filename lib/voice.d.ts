@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { AudioPlayer, StreamType } from '@discordjs/voice';
+import { PlayerSubscription, StreamType } from '@discordjs/voice';
 import { EventEmitter, Readable } from 'stream';
 export interface VoicePresenceEvent {
     connectionError: (event: Error, streamName: string | undefined) => void;
@@ -21,10 +21,10 @@ export interface VoicePresence extends EventEmitter {
 }
 export declare class VoicePresence extends EventEmitter {
     private readonly guildId;
-    private readonly stream;
+    private readonly subscription;
     private streamName?;
     private volume?;
-    constructor(guildId: string, player: AudioPlayer);
+    constructor(guildId: string, subscription: PlayerSubscription);
     rejoin(channelId?: string, selfDeaf?: boolean, selfMute?: boolean): void;
     disconnect(final?: boolean): void;
     isPlaying(): boolean;

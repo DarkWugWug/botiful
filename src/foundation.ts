@@ -265,7 +265,7 @@ export class ArmoredUser {
 		})
 		const subscription = voiceConnection.subscribe(player)
 		if (subscription == null) throw new Error('When creating the voice connection, failed to subscribe to the audio player')
-		return new VoicePresence(guildId, player)
+		return new VoicePresence(guildId, subscription)
 	}
 
 	public isInVoiceChannel (): boolean {
