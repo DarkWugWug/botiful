@@ -88,7 +88,7 @@ export class VoicePresence extends EventEmitter {
 		super()
 		this.guildId = guildId
 		const voice = getVoiceConnection(guildId)
-		if (voice == null) throw new Error(`Guild ${guildId} doesn't have an active voice connection! Construct @discordjs/voice.joinVoiceChannel before calling this!`)
+		if (voice == null) throw new Error(`Guild ${guildId} doesn't have an active voice connection! Join the user with User.joinInVoice() or construct your own with @discordjs/voice.joinVoiceChannel() before calling this!`)
 		voice.on('error', (err: Error) => this.emit('connectionError', err, this.streamName))
 		voice.on('stateChange', (_oldState, newState) => {
 			switch (newState.status) {
@@ -180,7 +180,7 @@ export class VoicePresence extends EventEmitter {
 	public startTransmitting (
 		stream: string | Readable,
 		streamName?: string,
-		format: StreamType = StreamType.WebmOpus
+		format: StreamType = StreamType.Arbitrary
 	): void {
 		this.streamName = streamName
 		const resource = createAudioResource(stream, { inputType: format, inlineVolume: true })

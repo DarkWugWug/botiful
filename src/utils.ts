@@ -71,7 +71,7 @@ export class UsageBuilder {
 		const builder = new EmbedBuilder()
 			.setColor('Greyple')
 			.setTitle(`The ${this.name} action`)
-		if (this.description != null) builder.setDescription(this.description)
+		if (this.description != null) builder.setDescription(f.fmt(this.description))
 		builder.addFields(
 			this.useCases.map((x) => {
 				if (x.description == null) x.description = ''
