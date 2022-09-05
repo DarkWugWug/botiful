@@ -71,7 +71,7 @@ export declare class ArmoredUser {
 export declare class ArmoredClient {
     private readonly client;
     constructor(client: Client);
-    guildsHaveRole(role: string): boolean;
+    guildsHaveRole(role: string): Promise<boolean>;
     createRoleInGuilds(name: string, color?: ColorResolvable, mentionable?: boolean): Promise<void>;
 }
 export declare class Command {

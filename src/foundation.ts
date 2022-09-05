@@ -277,8 +277,10 @@ export class ArmoredUser {
 export class ArmoredClient {
 	constructor (private readonly client: Client) {}
 
-	public guildsHaveRole (role: string): boolean {
+	public async guildsHaveRole (role: string): Promise<boolean> {
 		for (const guild of this.client.guilds.cache.values()) {
+			await guild.roles.fetch('guildId') // Forces this to update the cache
+			// console.log(`ROLE: [ ${[...guild.roles.cache.values()].some((x) => x.name).join(', ')} ]`)
 			if (!guild.roles.cache.some((x) => x.name === role)) return false
 		}
 		return true

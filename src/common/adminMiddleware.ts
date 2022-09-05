@@ -16,7 +16,7 @@ export class AdminAccessMiddleware implements IMiddleware<AdminAccessData> {
 	}
 
 	public async init (_privateData: Store<AdminAccessData>, client: Client): Promise<void> {
-		if (client.guildsHaveRole(this.roleName)) return
+		if (await client.guildsHaveRole(this.roleName)) return
 		if (this.logger != null) this.logger.warn(`Not all guilds have role named ${this.roleName}. Creating new role for the admin middleware.`)
 		await client.createRoleInGuilds(this.roleName, 'Random')
 	}
