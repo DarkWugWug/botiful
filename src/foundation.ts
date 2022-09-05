@@ -279,6 +279,7 @@ export class ArmoredClient {
 
 	public guildsHaveRole (role: string): boolean {
 		for (const guild of this.client.guilds.cache.values()) {
+			// TODO: Remove
 			console.log(`ROLE: ${[...guild.roles.cache.values()].map((x) => x.name).join(', ')}`)
 			if (!guild.roles.cache.some((x) => x.name === role)) return false
 		}
