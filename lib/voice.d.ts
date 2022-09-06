@@ -31,7 +31,7 @@ export declare class VoicePresence extends EventEmitter {
     constructor(guildId: string, subscription: PlayerSubscription);
     rejoin(channelId?: string, selfDeaf?: boolean, selfMute?: boolean): void;
     disconnect(final?: boolean): void;
-    isPlaying(): boolean;
+    isTransmitting(): boolean;
     pause(): void;
     resume(): void;
     stopTransmitting(): void;
@@ -39,6 +39,5 @@ export declare class VoicePresence extends EventEmitter {
     getVolume(): number | undefined;
     setVolume(db: number): void;
     private registerEventForwarders;
-    private registerVolumeControls;
 }
 //# sourceMappingURL=voice.d.ts.map
