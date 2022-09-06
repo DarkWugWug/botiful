@@ -200,7 +200,7 @@ export class VoicePresence extends EventEmitter {
 		this.streamName = streamName
 		const resource = createAudioResource(stream, { inputType, inlineVolume: true })
 		if (resource.volume == null) throw new Error('Internal Error: Expected volume transformer to not be null')
-		resource.volume.setVolume(0.5) // TODO: Swap back to decibels after testing
+		resource.volume.setVolume(2) // TODO: Swap back to decibels after testing
 		// resource.volume.setVolumeDecibels(this.volume)
 		const voice = getVoiceConnection(this.guildId)
 		if (voice == null) throw new Error(`Cannot start transmitting: there are no voice connections for guild ${this.guildId}. Did you create a voice connection with 'User.joinInVoice()' or manually with '@discordjs/voice.createVoiceConnection()' before calling this?`)
