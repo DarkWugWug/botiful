@@ -3,12 +3,16 @@ import { PlayerSubscription, StreamType } from '@discordjs/voice';
 import { EventEmitter, Readable } from 'stream';
 export interface VoicePresenceEvent {
     connectionError: (event: Error, streamName: string | undefined) => void;
+    connectionDebug: (message: string) => void;
     connectionSignalling: (streamName: string | undefined) => void;
     connectionStandby: (streamName: string | undefined) => void;
     connectionJoining: (streamName: string | undefined) => void;
     connectionReady: (streamName: string | undefined) => void;
     connectionDestroyed: (streamName: string | undefined) => void;
     playerError: (streamName: string | undefined) => void;
+    playerDebug: (message: string) => void;
+    playerSubscribe: (subscription: PlayerSubscription) => void;
+    playerUnsubscribe: (subscription: PlayerSubscription) => void;
     playerIdle: (streamName: string | undefined) => void;
     playerBuffering: (streamName: string | undefined) => void;
     playerStreaming: (streamName: string | undefined) => void;

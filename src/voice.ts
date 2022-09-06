@@ -13,49 +13,84 @@ import { EventEmitter, Readable } from 'stream'
 export interface VoicePresenceEvent {
 	/**
 	 * Emitted when the Discord voice connection has an error.
+	 * @event
 	 */
 	connectionError: (event: Error, streamName: string | undefined) => void
-
+	/**
+	 * Emitted when the voice connection releases debugging information
+	 * @event
+	 */
+	connectionDebug: (message: string) => void
+	/**
+	 * Emitted when the Discord voice connection is waiting to receive a
+	 * VOICE_SERVER_UPDATE and VOICE_STATE_UPDATE packet from Discord, provided by
+	 * the adapter. This is it's default state.
+	 * @event
+	 */
 	connectionSignalling: (streamName: string | undefined) => void
 	/**
 	 * Emitted when the Discord voice connection is disconnected (but still able
 	 * to be used with .rejoin()).
+	 * @event
 	 */
 	connectionStandby: (streamName: string | undefined) => void
 	/**
 	 * Emitted when the Discord voice connection is establishing a connection.
+	 * @event
 	 */
 	connectionJoining: (streamName: string | undefined) => void
 	/**
 	 * Emitted when the Discord voice connection is active and healthy.
+	 * @event
 	 */
 	connectionReady: (streamName: string | undefined) => void
 	/**
 	 * Emitted when the Discord voice connection has been destroyed and untracked,
 	 * it cannot be reused.
+	 * @event
 	 */
 	connectionDestroyed: (streamName: string | undefined) => void
 	/**
 	 * Emitted when the audio resource being played has an error.
+	 * @event
 	 */
 	playerError: (streamName: string | undefined) => void
 	/**
+	 * Emitted when the audio player releases debugging information
+	 * @event
+	 */
+	playerDebug: (message: string) => void
+	/**
+	 * Emitted when the audio player is subscribed to a voice connection
+	 * @event
+	 */
+	playerSubscribe: (subscription: PlayerSubscription) => void
+	/**
+	 * Emitted when the audio player unsubscribed by a voice connection
+	 * @event
+	 */
+	playerUnsubscribe: (subscription: PlayerSubscription) => void
+	/**
 	 * Emitted when the audio player has no resource to play.
 	 * This is the starting state.
+	 * @event
 	 */
 	playerIdle: (streamName: string | undefined) => void
 	/**
 	 * Emitted when the audio player is waiting for a resource to become readable.
+	 * @event
 	 */
 	playerBuffering: (streamName: string | undefined) => void
 	/**
 	 * Emitted when the audio player is actively playing an AudioResource. When playback ends,
 	 * it will enter the Idle state.
+	 * @event
 	 */
 	playerStreaming: (streamName: string | undefined) => void
 	/**
 	 * Emitted when the audio player has either been explicitly paused by the user,
 	 * or done automatically by the audio player itself.
+	 * @event
 	 */
 	playerPaused: (streamName: string | undefined) => void
 }
@@ -90,6 +125,7 @@ export class VoicePresence extends EventEmitter {
 		const voice = getVoiceConnection(guildId)
 		if (voice == null) throw new Error(`Guild ${guildId} doesn't have an active voice connection! Join the user with User.joinInVoice() or construct your own with @discordjs/voice.joinVoiceChannel() before calling this!`)
 		voice.on('error', (err: Error) => this.emit('connectionError', err, this.streamName))
+		voice.on('debug', (message) => this.emit('playerDebug', message))
 		voice.on('stateChange', (_oldState, newState) => {
 			switch (newState.status) {
 				case VoiceConnectionStatus.Signalling: this.emit('connectionSignalling', this.streamName); break
@@ -101,6 +137,9 @@ export class VoicePresence extends EventEmitter {
 		})
 		this.subscription = subscription
 		this.subscription.player.on('error', () => this.emit('playerError', this.streamName))
+		this.subscription.player.on('debug', (message: string) => this.emit('playerDebug', message))
+		this.subscription.player.on('subscribe', (subscription) => this.emit('playerSubscribe', subscription))
+		this.subscription.player.on('unsubscribe', (subscription) => this.emit('playerUnsubscribe', subscription))
 		this.subscription.player.on('stateChange', (_oldState, newState) => {
 			switch (newState.status) {
 				case AudioPlayerStatus.Idle: this.emit('playerIdle', this.streamName); break
