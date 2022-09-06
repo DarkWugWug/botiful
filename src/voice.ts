@@ -125,7 +125,6 @@ export class VoicePresence extends EventEmitter {
 		const voice = getVoiceConnection(guildId)
 		if (voice == null) throw new Error(`Guild ${guildId} doesn't have an active voice connection! Join the user with User.joinInVoice() or construct your own with @discordjs/voice.joinVoiceChannel() before creating a VoicePresences!`)
 		this.registerEventForwarders(voice)
-		this.registerVolumeControls()
 	}
 
 	/**
@@ -165,7 +164,7 @@ export class VoicePresence extends EventEmitter {
 		}
 	}
 
-	public isPlaying (): boolean {
+	public isTransmitting (): boolean {
 		const voice = getVoiceConnection(this.guildId)
 		if (voice == null) throw new Error(`Couldn't determine if this is playing because there is no voice connection for guild ${this.guildId}`)
 		return this.subscription.player.state.status === 'playing' && voice.state.status === 'ready'
@@ -200,6 +199,8 @@ export class VoicePresence extends EventEmitter {
 	): void {
 		this.streamName = streamName
 		const resource = createAudioResource(stream, { inputType, inlineVolume: true })
+		if (resource.volume == null) throw new Error('Internal Error: Expected volume transformer to not be null')
+		resource.volume.setVolumeDecibels(this.volume)
 		const voice = getVoiceConnection(this.guildId)
 		if (voice == null) throw new Error(`Cannot start transmitting: there are no voice connections for guild ${this.guildId}. Did you create a voice connection with 'User.joinInVoice()' or manually with '@discordjs/voice.createVoiceConnection()' before calling this?`)
 		voice.setSpeaking(true)
@@ -253,16 +254,6 @@ export class VoicePresence extends EventEmitter {
 				case AudioPlayerStatus.Playing: this.emit('playerStreaming', this.streamName, newState.resource.volume?.volumeDecibels); break
 				case AudioPlayerStatus.AutoPaused:
 				case AudioPlayerStatus.Paused: this.emit('playerPaused', this.streamName); break
-			}
-		})
-	}
-
-	private registerVolumeControls (): void {
-		this.subscription.player.on('stateChange', (_oldState, newState) => {
-			if (newState.status === AudioPlayerStatus.Playing) {
-				const volumeTransformer = newState.resource.volume
-				if (volumeTransformer == null) throw new Error('Audio player had resource with no volume transformer. Expected this resource to be created with the "inlineVolume" option')
-				volumeTransformer.setVolumeDecibels(this.volume)
 			}
 		})
 	}
