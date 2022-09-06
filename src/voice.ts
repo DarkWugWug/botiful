@@ -1,11 +1,10 @@
-import { VolumeTransformer } from 'prism-media'
 import {
-	AudioPlayerPlayingState,
 	AudioPlayerStatus,
 	createAudioResource,
 	getVoiceConnection,
 	PlayerSubscription,
 	StreamType,
+	VoiceConnection,
 	VoiceConnectionStatus
 } from '@discordjs/voice'
 import { EventEmitter, Readable } from 'stream'
@@ -117,38 +116,16 @@ export class VoicePresence extends EventEmitter {
 	/**
 	 * Volume in decibels
 	 */
-	private volume?: number
+	private volume: number = 60
 
 	constructor (guildId: string, subscription: PlayerSubscription) {
 		super()
 		this.guildId = guildId
-		const voice = getVoiceConnection(guildId)
-		if (voice == null) throw new Error(`Guild ${guildId} doesn't have an active voice connection! Join the user with User.joinInVoice() or construct your own with @discordjs/voice.joinVoiceChannel() before calling this!`)
-		voice.on('error', (err: Error) => this.emit('connectionError', err, this.streamName))
-		voice.on('debug', (message) => this.emit('playerDebug', message))
-		voice.on('stateChange', (_oldState, newState) => {
-			switch (newState.status) {
-				case VoiceConnectionStatus.Signalling: this.emit('connectionSignalling', this.streamName); break
-				case VoiceConnectionStatus.Connecting: this.emit('connectionJoining', this.streamName); break
-				case VoiceConnectionStatus.Disconnected: this.emit('connectionStandby', this.streamName); break
-				case VoiceConnectionStatus.Ready: this.emit('connectionReady', this.streamName); break
-				case VoiceConnectionStatus.Destroyed: this.emit('connectionDestroyed', this.streamName); break
-			}
-		})
 		this.subscription = subscription
-		this.subscription.player.on('error', () => this.emit('playerError', this.streamName))
-		this.subscription.player.on('debug', (message: string) => this.emit('playerDebug', message))
-		this.subscription.player.on('subscribe', (subscription) => this.emit('playerSubscribe', subscription))
-		this.subscription.player.on('unsubscribe', (subscription) => this.emit('playerUnsubscribe', subscription))
-		this.subscription.player.on('stateChange', (_oldState, newState) => {
-			switch (newState.status) {
-				case AudioPlayerStatus.Idle: this.emit('playerIdle', this.streamName); break
-				case AudioPlayerStatus.Buffering: this.emit('playerBuffering', this.streamName); break
-				case AudioPlayerStatus.Playing: this.emit('playerStreaming', this.streamName, newState.resource.volume?.volumeDecibels); break
-				case AudioPlayerStatus.AutoPaused:
-				case AudioPlayerStatus.Paused: this.emit('playerPaused', this.streamName); break
-			}
-		})
+		const voice = getVoiceConnection(guildId)
+		if (voice == null) throw new Error(`Guild ${guildId} doesn't have an active voice connection! Join the user with User.joinInVoice() or construct your own with @discordjs/voice.joinVoiceChannel() before creating a VoicePresences!`)
+		this.registerEventForwarders(voice)
+		this.registerVolumeControls()
 	}
 
 	/**
@@ -219,18 +196,10 @@ export class VoicePresence extends EventEmitter {
 	public startTransmitting (
 		stream: string | Readable,
 		streamName?: string,
-		inputType: StreamType = StreamType.Arbitrary,
-		inlineVolume = true
+		inputType: StreamType = StreamType.Arbitrary
 	): void {
 		this.streamName = streamName
-		this.volume = undefined
-		const resource = createAudioResource(stream, { inputType, inlineVolume })
-		if (inlineVolume) {
-			if (resource.volume == null) throw new Error('Expected resource to have volume property. Was it not created with the `inlineVolume: true` option?')
-			// TODO: Make cross fade if already playing a resource
-			if (this.volume == null) this.volume = 55
-			else resource.volume.setVolumeDecibels(this.volume)
-		}
+		const resource = createAudioResource(stream, { inputType, inlineVolume: true })
 		const voice = getVoiceConnection(this.guildId)
 		if (voice == null) throw new Error(`Cannot start transmitting: there are no voice connections for guild ${this.guildId}. Did you create a voice connection with 'User.joinInVoice()' or manually with '@discordjs/voice.createVoiceConnection()' before calling this?`)
 		voice.setSpeaking(true)
@@ -255,12 +224,46 @@ export class VoicePresence extends EventEmitter {
 	 */
 	public setVolume (db: number): void {
 		this.volume = db
-		this.getResourceVolumeTransformer().setVolumeDecibels(db)
+		const state = this.subscription.player.state
+		if (state.status === AudioPlayerStatus.Playing) {
+			state.resource.volume?.setVolumeDecibels(db)
+		}
 	}
 
-	private getResourceVolumeTransformer (): VolumeTransformer {
-		const resourceVolume = (this.subscription.player.state as AudioPlayerPlayingState).resource.volume
-		if (resourceVolume == null) throw new Error("This audio resource doesn't have a volume option and setVolume was called. Was it not created with the `inlineVolume: true` option?")
-		return resourceVolume
+	private registerEventForwarders (voice: VoiceConnection): void {
+		voice.on('error', (err: Error) => this.emit('connectionError', err, this.streamName))
+		voice.on('debug', (message) => this.emit('playerDebug', message))
+		voice.on('stateChange', (_oldState, newState) => {
+			switch (newState.status) {
+				case VoiceConnectionStatus.Signalling: this.emit('connectionSignalling', this.streamName); break
+				case VoiceConnectionStatus.Connecting: this.emit('connectionJoining', this.streamName); break
+				case VoiceConnectionStatus.Disconnected: this.emit('connectionStandby', this.streamName); break
+				case VoiceConnectionStatus.Ready: this.emit('connectionReady', this.streamName); break
+				case VoiceConnectionStatus.Destroyed: this.emit('connectionDestroyed', this.streamName); break
+			}
+		})
+		this.subscription.player.on('error', () => this.emit('playerError', this.streamName))
+		this.subscription.player.on('debug', (message: string) => this.emit('playerDebug', message))
+		this.subscription.player.on('subscribe', (subscription) => this.emit('playerSubscribe', subscription))
+		this.subscription.player.on('unsubscribe', (subscription) => this.emit('playerUnsubscribe', subscription))
+		this.subscription.player.on('stateChange', (_oldState, newState) => {
+			switch (newState.status) {
+				case AudioPlayerStatus.Idle: this.emit('playerIdle', this.streamName); break
+				case AudioPlayerStatus.Buffering: this.emit('playerBuffering', this.streamName); break
+				case AudioPlayerStatus.Playing: this.emit('playerStreaming', this.streamName, newState.resource.volume?.volumeDecibels); break
+				case AudioPlayerStatus.AutoPaused:
+				case AudioPlayerStatus.Paused: this.emit('playerPaused', this.streamName); break
+			}
+		})
+	}
+
+	private registerVolumeControls (): void {
+		this.subscription.player.on('stateChange', (_oldState, newState) => {
+			if (newState.status === AudioPlayerStatus.Playing) {
+				const volumeTransformer = newState.resource.volume
+				if (volumeTransformer == null) throw new Error('Audio player had resource with no volume transformer. Expected this resource to be created with the "inlineVolume" option')
+				volumeTransformer.setVolumeDecibels(this.volume)
+			}
+		})
 	}
 }
