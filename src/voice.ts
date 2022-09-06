@@ -80,8 +80,8 @@ export class VoicePresence extends EventEmitter {
 	private readonly subscription: PlayerSubscription
 	private streamName?: string
 	/**
-	* Volume in decibels
-	*/
+	 * Volume in decibels
+	 */
 	private volume?: number
 
 	constructor (guildId: string, subscription: PlayerSubscription) {
@@ -180,16 +180,20 @@ export class VoicePresence extends EventEmitter {
 	public startTransmitting (
 		stream: string | Readable,
 		streamName?: string,
-		format: StreamType = StreamType.Arbitrary
+		inputType: StreamType = StreamType.Arbitrary,
+		inlineVolume = true
 	): void {
 		this.streamName = streamName
-		const resource = createAudioResource(stream, { inputType: format, inlineVolume: true })
-		if (resource.volume == null) throw new Error('Expected resource to have volume property. Was it not created with the `inlineVolume: true` option?')
-		// TODO: Make cross fade if already playing a resource
-		if (this.volume == null) this.volume = 55
-		else resource.volume.setVolumeDecibels(this.volume)
+		this.volume = undefined
+		const resource = createAudioResource(stream, { inputType, inlineVolume })
+		if (inlineVolume) {
+			if (resource.volume == null) throw new Error('Expected resource to have volume property. Was it not created with the `inlineVolume: true` option?')
+			// TODO: Make cross fade if already playing a resource
+			if (this.volume == null) this.volume = 55
+			else resource.volume.setVolumeDecibels(this.volume)
+		}
 		const voice = getVoiceConnection(this.guildId)
-		if (voice == null) throw new Error(`Cannot start streaming because there is no voice connection for guild ${this.guildId}`)
+		if (voice == null) throw new Error(`Cannot start transmitting: there are no voice connections for guild ${this.guildId}. Did you create a voice connection with 'User.joinInVoice()' or manually with '@discordjs/voice.createVoiceConnection()' before calling this?`)
 		voice.setSpeaking(true)
 		this.subscription.player.play(resource)
 	}
@@ -202,12 +206,8 @@ export class VoicePresence extends EventEmitter {
 	 * did you want?
 	 * @returns Volume in decibels
 	 */
-	public getVolume (): number {
-		if (this.volume != null) return this.volume
-		if (this.subscription.player.state.status === 'playing') {
-			return this.getResourceVolumeTransformer().volumeDecibels
-		}
-		throw new Error("Couldn't find volume for VoicePresence and nothing was playing. Only call if set or playing something!")
+	public getVolume (): number | undefined {
+		return this.volume
 	}
 
 	/**
@@ -215,21 +215,13 @@ export class VoicePresence extends EventEmitter {
 	 * @param db Volume level in decibels
 	 */
 	public setVolume (db: number): void {
-		if (db < 0 || db > 1) throw new Error(`Invalid volume setting: ${db}. Must be a number from 0.0 to 1.0`)
-		const state = this.subscription.player.state
 		this.volume = db
-		if ((state.status as AudioPlayerStatus) === 'playing') {
-			this.setResourceVolume(db)
-		}
+		this.getResourceVolumeTransformer().setVolumeDecibels(db)
 	}
 
 	private getResourceVolumeTransformer (): VolumeTransformer {
 		const resourceVolume = (this.subscription.player.state as AudioPlayerPlayingState).resource.volume
 		if (resourceVolume == null) throw new Error("This audio resource doesn't have a volume option and setVolume was called. Was it not created with the `inlineVolume: true` option?")
 		return resourceVolume
-	}
-
-	private setResourceVolume (db: number): void {
-		this.getResourceVolumeTransformer().setVolumeDecibels(db)
 	}
 }

@@ -31,10 +31,9 @@ export declare class VoicePresence extends EventEmitter {
     pause(): void;
     resume(): void;
     stopTransmitting(): void;
-    startTransmitting(stream: string | Readable, streamName?: string, format?: StreamType): void;
-    getVolume(): number;
+    startTransmitting(stream: string | Readable, streamName?: string, inputType?: StreamType, inlineVolume?: boolean): void;
+    getVolume(): number | undefined;
     setVolume(db: number): void;
     private getResourceVolumeTransformer;
-    private setResourceVolume;
 }
 //# sourceMappingURL=voice.d.ts.map
