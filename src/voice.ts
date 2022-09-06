@@ -86,7 +86,7 @@ export interface VoicePresenceEvent {
 	 * it will enter the Idle state.
 	 * @event
 	 */
-	playerStreaming: (streamName: string | undefined) => void
+	playerStreaming: (streamName: string | undefined, volume: number | undefined) => void
 	/**
 	 * Emitted when the audio player has either been explicitly paused by the user,
 	 * or done automatically by the audio player itself.
@@ -144,7 +144,7 @@ export class VoicePresence extends EventEmitter {
 			switch (newState.status) {
 				case AudioPlayerStatus.Idle: this.emit('playerIdle', this.streamName); break
 				case AudioPlayerStatus.Buffering: this.emit('playerBuffering', this.streamName); break
-				case AudioPlayerStatus.Playing: this.emit('playerStreaming', this.streamName); break
+				case AudioPlayerStatus.Playing: this.emit('playerStreaming', this.streamName, newState.resource.volume?.volumeDecibels); break
 				case AudioPlayerStatus.AutoPaused:
 				case AudioPlayerStatus.Paused: this.emit('playerPaused', this.streamName); break
 			}

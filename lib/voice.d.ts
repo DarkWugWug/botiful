@@ -15,7 +15,7 @@ export interface VoicePresenceEvent {
     playerUnsubscribe: (subscription: PlayerSubscription) => void;
     playerIdle: (streamName: string | undefined) => void;
     playerBuffering: (streamName: string | undefined) => void;
-    playerStreaming: (streamName: string | undefined) => void;
+    playerStreaming: (streamName: string | undefined, volume: number | undefined) => void;
     playerPaused: (streamName: string | undefined) => void;
 }
 export interface VoicePresence extends EventEmitter {
